@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Certificates · OptiCare</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <%- include('partials/sidebar') %>
+  <div class="main">
+    <div class="page-header">
+      <h1>Certificates & Licenses</h1>
+      <div class="subtitle">Track renewal dates for clinic certifications</div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0;">Add Certificate</h2>
+      <form action="/certificates" method="POST" class="form-row">
+        <div class="form-group"><input type="text" name="name" placeholder="e.g. Optometry License" required /></div>
+        <div class="form-group"><input type="date" name="expiry_date" required /></div>
+        <button type="submit" class="btn">Add</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0;">All Certificates</h2>
+      <% certificates.forEach(function(cert) { %>
+        <div class="list-row">
+          <div>
+            <div class="name"><%= cert.name %></div>
+            <div class="meta">Expires <%= cert.expiry_date %></div>
+          </div>
+          <form action="/certificates/<%= cert.id %>/renew" method="POST" style="display:flex; gap:6px;">
+            <input type="date" name="expiry_date" required style="padding:6px; border-radius:8px; border:1px solid var(--border);" />
+            <button type="submit" class="btn btn-sm btn-secondary">Renew</button>
+          </form>
+        </div>
+      <% }); %>
+    </div>
+
+    <a href="/">&larr; Back to patient list</a>
+  </div>
+</div>
+</body>
+</html>

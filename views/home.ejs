@@ -15,6 +15,16 @@
       <div class="subtitle">Manage your patients below</div>
     </div>
 
+    <% if (expiringCertificates.length > 0) { %>
+  <div class="card" style="background:#FFF4E5; border-left:4px solid #B8860B;">
+    <strong>⚠ Certificate Renewal Needed</strong>
+    <% expiringCertificates.forEach(function(cert) { %>
+      <p style="margin:4px 0;"><%= cert.name %> — expires <%= cert.expiry_date %></p>
+    <% }); %>
+    <a href="/certificates">Go to Certificates</a>
+  </div>
+<% } %>
+
     <div class="stats-grid">
   <div class="stat-card dark">
     <div class="value"><%= totalPatients %></div>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Referral · OptiCare</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <%- include('partials/sidebar') %>
+  <div class="main">
+    <div class="page-header">
+      <h1>Referral Sheet — <%= patient.full_name %></h1>
+    </div>
+
+    <div class="card" style="max-width:480px;">
+      <form action="/patients/<%= patient.id %>/referral" method="POST">
+        <div class="form-group"><input type="text" name="referred_to" placeholder="Referred to (e.g. Dr. Mensah, Korle Bu Eye Clinic)" required /></div>
+        <div class="form-group"><textarea name="reason" placeholder="Reason for referral" rows="4" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border); font-family:inherit;"></textarea></div>
+        <button type="submit" class="btn">Generate Referral Sheet</button>
+      </form>
+    </div>
+
+    <a href="/patients/<%= patient.id %>">&larr; Back to patient</a>
+  </div>
+</div>
+</body>
+</html>

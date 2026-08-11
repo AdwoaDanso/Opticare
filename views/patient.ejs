@@ -21,12 +21,12 @@
       </div>
     <% } %>
 
-    <div class="card">
-      <form action="/queue/checkin/<%= patient.id %>" method="POST">
-        <button type="submit" class="btn">Check In to Queue</button>
-      </form>
-    </div>
-
+    <div class="card" style="display:flex; gap:12px;">
+  <form action="/queue/checkin/<%= patient.id %>" method="POST">
+    <button type="submit" class="btn">Check In to Queue</button>
+  </form>
+  <a href="/patients/<%= patient.id %>/referral" class="btn btn-secondary">Create Referral</a>
+</div>
     <div class="card">
       <h2 style="margin-top:0;">Examination History</h2>
       <% if (exams.length === 0) { %>
@@ -164,6 +164,25 @@
         <button type="submit" class="btn btn-secondary">Schedule</button>
       </form>
     </div>
+
+    <div class="card">
+  <h2 style="margin-top:0;">Scans & Images</h2>
+  <% if (files.length === 0) { %>
+    <div class="empty-state">No files uploaded yet.</div>
+  <% } else { %>
+    <% files.forEach(function(f) { %>
+      <div class="list-row">
+        <div class="name"><%= f.original_name %></div>
+        <a href="/uploads/<%= f.filename %>" target="_blank">View</a>
+      </div>
+    <% }); %>
+  <% } %>
+
+  <form action="/patients/<%= patient.id %>/files" method="POST" enctype="multipart/form-data" style="margin-top:12px; display:flex; gap:10px;">
+    <input type="file" name="file" required />
+    <button type="submit" class="btn btn-secondary">Upload</button>
+  </form>
+</div>
 
     <a href="/">&larr; Back to patient list</a>
   </div>

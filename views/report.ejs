@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Monthly Report · OptiCare</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <%- include('partials/sidebar') %>
+  <div class="main">
+    <div class="page-header">
+      <h1>Monthly Report</h1>
+      <div class="subtitle"><%= month %></div>
+    </div>
+
+    <form method="GET" action="/report" style="margin-bottom:20px;">
+      <input type="month" name="month" value="<%= month %>" onchange="this.form.submit()" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border);" />
+    </form>
+
+    <div class="stats-grid">
+      <div class="stat-card dark"><div class="value"><%= totalPatients %></div><div class="label">Total Patients (all time)</div></div>
+      <div class="stat-card"><div class="value"><%= newClients %></div><div class="label">New Clients This Month</div></div>
+      <div class="stat-card"><div class="value"><%= oldClients %></div><div class="label">Returning Clients This Month</div></div>
+      <div class="stat-card"><div class="value"><%= reviews %></div><div class="label">Reviews This Month</div></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0;">Sales by Category (This Month)</h2>
+      <% if (salesByCategory.length === 0) { %>
+        <div class="empty-state">No stock item sales recorded this month.</div>
+      <% } else { %>
+        <% salesByCategory.forEach(function(row) { %>
+          <div class="list-row">
+            <div class="name"><%= row.category %></div>
+            <div class="meta"><%= row.total_sold %> units sold · GHS <%= row.total_revenue %> revenue</div>
+          </div>
+        <% }); %>
+      <% } %>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0;">Stock Remaining (Current)</h2>
+      <% stockRemaining.forEach(function(row) { %>
+        <div class="list-row">
+          <div class="name"><%= row.category %></div>
+          <div class="meta"><%= row.total_remaining %> units remaining</div>
+        </div>
+      <% }); %>
+    </div>
+
+    <a href="/">&larr; Back to patient list</a>
+  </div>
+</div>
+</body>
+</html>

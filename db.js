@@ -85,6 +85,26 @@ db.exec(`
   )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS certificates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    expiry_date TEXT NOT NULL,
+    renewed_at TEXT
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS patient_files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    patient_id INTEGER NOT NULL,
+    filename TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patients(id)
+  )
+`);
+
 // ---- Patches for columns added after the tables above were first created ----
 // (CREATE TABLE IF NOT EXISTS only runs on a brand-new table, so any column
 // added later needs an explicit ALTER TABLE like these instead.)
@@ -130,5 +150,15 @@ try {
 try {
   db.exec('ALTER TABLE invoices ADD COLUMN quantity_sold INTEGER');
 } catch (err) {}
+
+try {
+  db.exec('ALTER TABLE patients ADD COLUMN created_at TEXT');
+} catch (err) {}
+
+try {
+  db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'admin'");
+} catch (err) {}
+
+db.exec("UPDATE patients SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL");
 
 module.exports = db;
