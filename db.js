@@ -159,6 +159,10 @@ try {
   db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'admin'");
 } catch (err) {}
 
+try {
+  db.exec('ALTER TABLE queue_entries ADD COLUMN room TEXT');
+} catch (err) {}
+
 db.exec("UPDATE patients SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL");
 
 module.exports = db;

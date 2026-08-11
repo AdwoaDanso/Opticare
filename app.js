@@ -90,22 +90,31 @@ app.post('/logout', (req, res) => {
 // ===== Dashboard =====
 
 app.get('/dashboard', requireLogin, (req, res) => {
+  const role = res.locals.currentUser.role;
+
   const totalPatients = db.prepare('SELECT COUNT(*) AS count FROM patients').get().count;
   const waitingCount = db.prepare("SELECT COUNT(*) AS count FROM queue_entries WHERE status = 'waiting'").get().count;
   const unpaidCount = db.prepare("SELECT COUNT(*) AS count FROM invoices WHERE status = 'unpaid'").get().count;
   const lowStockCount = db.prepare('SELECT COUNT(*) AS count FROM stock_items WHERE quantity <= 3').get().count;
-  const expiringCertificates = db.prepare(
-    "SELECT * FROM certificates WHERE expiry_date <= date('now', '+30 days')"
-  ).all();
+
+  let expiringCertificates = [];
+  let revenueThisMonth = null;
+
+  if (role !== 'doctor') {
+    expiringCertificates = db.prepare(
+      "SELECT * FROM certificates WHERE expiry_date <= date('now', '+30 days')"
+    ).all();
+
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    revenueThisMonth = db.prepare(
+      "SELECT COALESCE(SUM(amount), 0) AS total FROM invoices WHERE status = 'paid' AND strftime('%Y-%m', created_at) = ?"
+    ).get(thisMonth).total;
+  }
 
   const thisMonth = new Date().toISOString().slice(0, 7);
   const newClientsThisMonth = db.prepare(
     "SELECT COUNT(*) AS count FROM patients WHERE strftime('%Y-%m', created_at) = ?"
   ).get(thisMonth).count;
-
-  const revenueThisMonth = db.prepare(
-    "SELECT COALESCE(SUM(amount), 0) AS total FROM invoices WHERE status = 'paid' AND strftime('%Y-%m', created_at) = ?"
-  ).get(thisMonth).total;
 
   const recentPatients = db.prepare('SELECT * FROM patients ORDER BY id DESC LIMIT 5').all();
   const pendingReminders = db.prepare(`
@@ -130,7 +139,18 @@ app.get('/dashboard', requireLogin, (req, res) => {
     GROUP BY category
   `).all();
 
+  let waitingQueue = [];
+  if (role === 'doctor' || role === 'admin') {
+    waitingQueue = db.prepare(`
+      SELECT queue_entries.*, patients.full_name
+      FROM queue_entries JOIN patients ON patients.id = queue_entries.patient_id
+      WHERE queue_entries.status = 'waiting'
+      ORDER BY queue_entries.checked_in_at ASC
+    `).all();
+  }
+
   res.render('dashboard', {
+    role: role,
     totalPatients: totalPatients,
     waitingCount: waitingCount,
     unpaidCount: unpaidCount,
@@ -142,6 +162,7 @@ app.get('/dashboard', requireLogin, (req, res) => {
     pendingReminders: pendingReminders,
     monthlyPatients: monthlyPatients,
     stockByCategory: stockByCategory,
+    waitingQueue: waitingQueue,
   });
 });
 
@@ -387,19 +408,35 @@ app.post('/queue/checkin/:patientId', requireLogin, requireRole('admin', 'recept
 });
 
 app.get('/queue', requireLogin, (req, res) => {
-  const queueEntries = db.prepare(`
+  const waiting = db.prepare(`
     SELECT queue_entries.*, patients.full_name
     FROM queue_entries
     JOIN patients ON patients.id = queue_entries.patient_id
     WHERE queue_entries.status = 'waiting'
   `).all();
 
-  res.render('queue', { queueEntries: queueEntries });
+  const inConsultation = db.prepare(`
+    SELECT queue_entries.*, patients.full_name
+    FROM queue_entries
+    JOIN patients ON patients.id = queue_entries.patient_id
+    WHERE queue_entries.status = 'in_progress'
+  `).all();
+
+  res.render('queue', { waiting: waiting, inConsultation: inConsultation });
 });
 
 app.post('/queue/:id/complete', requireLogin, (req, res) => {
   db.prepare("UPDATE queue_entries SET status = 'completed' WHERE id = ?").run(req.params.id);
   res.redirect('/queue');
+});
+
+app.post('/queue/:id/call', requireLogin, requireRole('admin', 'doctor'), (req, res) => {
+  const room = req.body.room;
+
+  db.prepare("UPDATE queue_entries SET status = 'in_progress', room = ? WHERE id = ?")
+    .run(room, req.params.id);
+
+  res.redirect('/dashboard');
 });
 
 // ===== Inventory =====

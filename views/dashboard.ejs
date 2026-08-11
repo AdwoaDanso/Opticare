@@ -55,12 +55,36 @@
     <div class="value"><%= newClientsThisMonth %></div>
     <div class="label">New Clients This Month</div>
   </div>
+  <% if (role !== 'doctor') { %>
   <div class="stat-card">
     <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
     <div class="value">GHS <%= revenueThisMonth.toFixed(2) %></div>
     <div class="label">Revenue This Month</div>
   </div>
+<% } %>
 </div>
+
+<% if (role === 'doctor' || role === 'admin') { %>
+  <div class="card">
+    <h2 style="margin-top:0;">Waiting Patients — Call to Room</h2>
+    <% if (waitingQueue.length === 0) { %>
+      <div class="empty-state">No one is currently waiting.</div>
+    <% } else { %>
+      <% waitingQueue.forEach(function(entry) { %>
+        <div class="list-row">
+          <div class="name"><%= entry.full_name %></div>
+          <form action="/queue/<%= entry.id %>/call" method="POST" style="display:flex; gap:8px;">
+            <select name="room" style="padding:6px; border-radius:8px; border:1px solid var(--border);">
+              <option value="Room 1">Room 1</option>
+              <option value="Room 2">Room 2</option>
+            </select>
+            <button type="submit" class="btn btn-sm">Call In</button>
+          </form>
+        </div>
+      <% }); %>
+    <% } %>
+  </div>
+<% } %>
 
     <div style="display:flex; gap:24px; flex-wrap:wrap;">
   <div class="card" style="flex:2; min-width:320px;">
