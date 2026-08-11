@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title><%= patient.full_name %> · OptiCare</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%230B3D2E%22/><text x=%2250%22 y=%2265%22 font-size=%2255%22 fill=%22white%22 text-anchor=%22middle%22 font-family=%22Arial%22>O</text></svg>" />
+</head>
+<body>
+<div class="layout">
+  <%- include('partials/sidebar') %>
+  <div class="main">
+    <div class="page-header">
+      <h1><%= patient.full_name %></h1>
+      <div class="subtitle">Phone: <%= patient.phone %></div>
+    </div>
+
+    <% if (visionAlert) { %>
+      <div class="card" style="background:#FBEAEA; border-left:4px solid var(--danger);">
+        <strong style="color:var(--danger);">⚠ Vision Change Detected</strong>
+        <p style="margin:8px 0 0;"><%= visionAlert %></p>
+      </div>
+    <% } %>
+
+    <div class="card">
+      <form action="/queue/checkin/<%= patient.id %>" method="POST">
+        <button type="submit" class="btn">Check In to Queue</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0;">Examination History</h2>
+      <% if (exams.length === 0) { %>
+        <div class="empty-state">No examinations yet.</div>
+      <% } else { %>
+        <% exams.forEach(function(exam) { %>
+  <div class="list-row">
+    <div>
+      <div class="name">Right: <%= exam.visual_acuity_right %> — Left: <%= exam.visual_acuity_left %></div>
+      <div class="meta">
+        IOP: <%= exam.eye_pressure_right || '—' %> / <%= exam.eye_pressure_left || '—' %>
+        · Color vision: <%= exam.color_vision || '—' %>
+        · Visual field: <%= exam.visual_field || '—' %>
+      </div>
+      <div class="meta"><%= exam.diagnosis %> · <%= exam.exam_date %></div>
+    </div>
+  </div>
+  <a href="/exams/<%= exam.id %>/prescription" target="_blank">Print Prescription</a>
+<% }); %>
+      <% } %>
+
+      <h3>New Examination</h3>
+<form action="/patients/<%= patient.id %>/exams" method="POST">
+  <p style="font-weight:600; margin-bottom:6px;">Visual Acuity</p>
+  <div class="form-row">
+    <div class="form-group"><input type="text" name="visual_acuity_right" placeholder="Right eye (e.g. 6/6)" /></div>
+    <div class="form-group"><input type="text" name="visual_acuity_left" placeholder="Left eye (e.g. 6/6)" /></div>
+  </div>
+
+  <p style="font-weight:600; margin-bottom:6px;">Eye Pressure (IOP)</p>
+  <div class="form-row">
+    <div class="form-group"><input type="text" name="eye_pressure_right" placeholder="Right eye (mmHg)" /></div>
+    <div class="form-group"><input type="text" name="eye_pressure_left" placeholder="Left eye (mmHg)" /></div>
+  </div>
+
+  <p style="font-weight:600; margin-bottom:6px;">Other Tests</p>
+  <div class="form-row">
+    <div class="form-group"><input type="text" name="color_vision" placeholder="Color vision result" /></div>
+    <div class="form-group"><input type="text" name="visual_field" placeholder="Visual field result" /></div>
+  </div>
+
+  <div class="form-group"><input type="text" name="diagnosis" placeholder="Diagnosis" /></div>
+  <button type="submit" class="btn btn-secondary">Save Exam</button>
+</form>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0;">Invoices</h2>
+      <% if (invoices.length === 0) { %>
+        <div class="empty-state">No invoices yet.</div>
+      <% } else { %>
+        <% invoices.forEach(function(invoice) { %>
+          <div class="list-row">
+            <div>
+              <div class="name"><%= invoice.description %></div>
+              <div class="meta">
+                GHS <%= invoice.amount %>
+                <% if (invoice.payment_method) { %> · Paid via <%= invoice.payment_method %><% } %>
+              </div>
+            </div>
+            <% if (invoice.status === 'unpaid') { %>
+              <form action="/invoices/<%= invoice.id %>/pay" method="POST" style="display:flex; gap:6px;">
+                <select name="payment_method" style="padding:6px; border-radius:8px; border:1px solid var(--border);">
+                  <option value="cash">Cash</option>
+                  <option value="momo">MoMo</option>
+                  <option value="card">Card</option>
+                </select>
+                <button type="submit" class="btn btn-sm">Mark Paid</button>
+              </form>
+            <% } else { %>
+              <span class="badge badge-success">paid</span>
+            <% } %>
+          </div>
+
+          <form action="/invoices/<%= invoice.id %>/order-status" method="POST" style="margin-top:8px;">
+            <select name="order_status" onchange="this.form.submit()" style="padding:6px; border-radius:8px; border:1px solid var(--border);">
+              <option value="ordered" <%= invoice.order_status === 'ordered' ? 'selected' : '' %>>Ordered</option>
+              <option value="ready" <%= invoice.order_status === 'ready' ? 'selected' : '' %>>Ready for Collection</option>
+              <option value="collected" <%= invoice.order_status === 'collected' ? 'selected' : '' %>>Collected</option>
+            </select>
+          </form>
+        <% }); %>
+      <% } %>
+
+      <h3>New Invoice</h3>
+<form action="/patients/<%= patient.id %>/invoices" method="POST" class="form-row">
+  <div class="form-group"><input type="text" name="description" placeholder="e.g. Eye exam fee" /></div>
+  <div class="form-group"><input type="number" name="amount" step="0.01" placeholder="Amount (GHS)" /></div>
+  <div class="form-group">
+    <select name="stock_item_id">
+      <option value="">— Not a stock item —</option>
+      <% stockItems.forEach(function(item) { %>
+        <option value="<%= item.id %>"><%= item.name %> (<%= item.quantity %> left)</option>
+      <% }); %>
+    </select>
+  </div>
+  <div class="form-group"><input type="number" name="quantity_sold" placeholder="Qty sold" /></div>
+  <button type="submit" class="btn btn-secondary">Create Invoice</button>
+</form>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0;">Reminders</h2>
+      <% if (reminders.length === 0) { %>
+        <div class="empty-state">No reminders scheduled.</div>
+      <% } else { %>
+        <% reminders.forEach(function(reminder) { %>
+  <div class="list-row">
+    <div>
+      <div class="name"><%= reminder.note %></div>
+      <div class="meta">Due <%= reminder.due_date %></div>
+    </div>
+    <% if (reminder.status === 'pending') { %>
+      <div style="display:flex; gap:6px;">
+        <form action="/reminders/<%= reminder.id %>/send" method="POST">
+          <input type="hidden" name="channel" value="email" />
+          <button type="submit" class="btn btn-sm btn-secondary">Email</button>
+        </form>
+        <form action="/reminders/<%= reminder.id %>/send" method="POST">
+          <input type="hidden" name="channel" value="whatsapp" />
+          <button type="submit" class="btn btn-sm btn-secondary">WhatsApp</button>
+        </form>
+      </div>
+    <% } else { %>
+      <span class="badge badge-success">sent</span>
+    <% } %>
+  </div>
+<% }); %>
+      <% } %>
+
+      <h3>Schedule Reminder</h3>
+      <form action="/patients/<%= patient.id %>/reminders" method="POST" class="form-row">
+        <div class="form-group"><input type="date" name="due_date" /></div>
+        <div class="form-group"><input type="text" name="note" placeholder="e.g. Annual review" /></div>
+        <button type="submit" class="btn btn-secondary">Schedule</button>
+      </form>
+    </div>
+
+    <a href="/">&larr; Back to patient list</a>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<div class="sidebar">
+  <div class="brand">OptiCare</div>
+  <nav>
+    <a href="/" class="<%= (currentPath === '/' || currentPath.startsWith('/patients')) ? 'active' : '' %>">Patients</a>
+    <a href="/queue" class="<%= currentPath.startsWith('/queue') ? 'active' : '' %>">Queue</a>
+    <a href="/recall" class="<%= currentPath.startsWith('/recall') ? 'active' : '' %>">Recall</a>
+    <a href="/inventory" class="<%= currentPath.startsWith('/inventory') ? 'active' : '' %>">Inventory</a>
+  </nav>
+  <% if (currentUser) { %>
+    <div style="position:absolute; bottom:24px; left:24px; right:24px; color:rgba(255,255,255,0.7); font-size:0.85rem;">
+      <div><%= currentUser.email %></div>
+      <form action="/logout" method="POST" style="margin-top:8px;">
+        <button type="submit" class="btn btn-sm btn-secondary">Log Out</button>
+      </form>
+    </div>
+  <% } %>
+</div>

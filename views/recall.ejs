@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Recall List · OptiCare</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="layout">
+  <%- include('partials/sidebar') %>
+  <div class="main">
+    <div class="page-header">
+      <h1>Recall List</h1>
+      <div class="subtitle">Patients overdue for a review (180+ days, or never examined)</div>
+    </div>
+
+    <div class="card">
+      <% if (overduePatients.length === 0) { %>
+        <div class="empty-state">No overdue patients right now.</div>
+      <% } else { %>
+        <form action="/recall/send" method="POST">
+          <% overduePatients.forEach(function(p) { %>
+            <div class="list-row">
+              <div>
+                <label>
+                  <input type="checkbox" name="patient_ids" value="<%= p.id %>" />
+                  <span class="name"><%= p.full_name %></span>
+                </label>
+                <div class="meta">Last visit: <%= p.last_visit || 'Never' %></div>
+              </div>
+            </div>
+          <% }); %>
+          <button type="submit" class="btn" style="margin-top:16px;">Send Reminders to Selected</button>
+        </form>
+      <% } %>
+    </div>
+
+    <a href="/">&larr; Back to patient list</a>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Queue · OptiCare</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%230B3D2E%22/><text x=%2250%22 y=%2265%22 font-size=%2255%22 fill=%22white%22 text-anchor=%22middle%22 font-family=%22Arial%22>O</text></svg>" />
+</head>
+<body>
+<div class="layout">
+  <%- include('partials/sidebar') %>
+  <div class="main">
+    <div class="page-header">
+      <h1>Patient Queue</h1>
+      <div class="subtitle">Who's waiting right now</div>
+    </div>
+
+    <div class="card">
+      <% if (queueEntries.length === 0) { %>
+        <div class="empty-state">No one is currently waiting.</div>
+      <% } else { %>
+        <% queueEntries.forEach(function(entry) { %>
+          <div class="list-row">
+            <div>
+              <div class="name"><%= entry.full_name %></div>
+              <div class="meta">
+                 <span class="badge <%= entry.status === 'waiting' ? 'badge-danger' : 'badge-success' %>"><%= entry.status %></span>
+              </div>
+            </div>
+            <% if (entry.status === 'waiting') { %>
+              <form action="/queue/<%= entry.id %>/complete" method="POST">
+                <button type="submit" class="btn btn-sm btn-secondary">Mark Done</button>
+              </form>
+            <% } %>
+          </div>
+        <% }); %>
+      <% } %>
+    </div>
+
+    <a href="/">&larr; Back to patient list</a>
+  </div>
+</div>
+</body>
+</html>
