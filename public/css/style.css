@@ -227,3 +227,89 @@ form.inline { display: inline-block; }
 /* ===== Universal card hover ===== */
 .card { transition: box-shadow 0.15s ease; }
 .card:hover { box-shadow: 0 4px 16px rgba(11,61,46,0.09); }
+
+/* ===== Tab Navigation ===== */
+.tab-nav {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+.tab-btn {
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.tab-btn:hover {
+  color: var(--forest);
+  background: rgba(11,61,46,0.04);
+  border-radius: 8px 8px 0 0;
+}
+.tab-btn.active {
+  color: var(--forest);
+  border-bottom-color: var(--accent);
+  font-weight: 700;
+}
+.tab-pane {
+  display: none;
+}
+.tab-pane.active {
+  display: block;
+}
+
+/* ===== Patient Banner ===== */
+.patient-banner {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(11,61,46,0.05);
+}
+.patient-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.patient-meta-grid .meta-item strong {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.patient-meta-grid .meta-item span {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ===== SVG Icon Utility ===== */
+.svg-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+  stroke: currentColor;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: middle;
+}
+.svg-icon.sm { width: 15px; height: 15px; }
+.svg-icon.lg { width: 22px; height: 22px; }

@@ -1,19 +1,146 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Referral Sheet · OptiCare</title>
+  <title>Medical Referral | <%= patient.full_name %> | OptiCare</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    @media print {
+      body { background: #fff; padding: 0; }
+      .no-print { display: none !important; }
+      .referral-box { box-shadow: none; border: none; padding: 0; }
+    }
+    .referral-box {
+      max-width: 780px;
+      margin: 20px auto;
+      padding: 40px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .header-table { width: 100%; margin-bottom: 24px; border-bottom: 2px solid #0B3D2E; padding-bottom: 16px; }
+    .brand-title { font-size: 24px; font-weight: 800; color: #0B3D2E; margin: 0; }
+    .brand-subtitle { font-size: 12px; color: #6B7280; }
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0B3D2E;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #E2E8F0;
+      padding-bottom: 4px;
+      margin: 20px 0 10px 0;
+    }
+    .meta-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .findings-box {
+      background: #F1F5F9;
+      border-left: 4px solid #0B3D2E;
+      padding: 14px 16px;
+      border-radius: 0 8px 8px 0;
+      white-space: pre-wrap;
+      font-family: inherit;
+      font-size: 13.5px;
+      margin-bottom: 16px;
+    }
+    .signature-area {
+      margin-top: 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .signature-line {
+      width: 250px;
+      border-top: 1px solid #000;
+      padding-top: 6px;
+      font-size: 13px;
+    }
+  </style>
 </head>
-<body style="padding:40px;">
-  <div class="card" style="max-width:450px;">
-    <h2 style="margin-top:0; color:var(--forest);">OptiCare Clinic — Referral Sheet</h2>
-    <p><strong>Patient:</strong> <%= patient.full_name %></p>
-    <p><strong>Phone:</strong> <%= patient.phone %></p>
-    <p><strong>Date:</strong> <%= new Date().toLocaleDateString() %></p>
-    <hr />
-    <p><strong>Referred To:</strong> <%= referredTo %></p>
-    <p><strong>Reason:</strong> <%= reason %></p>
-    <button class="btn" onclick="window.print()" style="margin-top:16px;">Print</button>
+<body style="background: #F0F1EC; padding: 20px;">
+
+<div class="referral-box">
+  <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+    <a href="/patients/<%= patient.id %>" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:6px;">
+      <svg class="svg-icon sm" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Back to Patient Chart
+    </a>
+    <button class="btn" onclick="window.print()" style="display:inline-flex; align-items:center; gap:6px;">
+      <svg class="svg-icon sm" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print Referral Letter
+    </button>
   </div>
+
+  <table class="header-table">
+    <tr>
+      <td>
+        <div class="brand-title">OptiCare Eye Clinic</div>
+        <div class="brand-subtitle">Department of Optometry & Ophthalmology · Diagnostic Eyecare Services</div>
+        <div class="brand-subtitle">Tel: +233 (0) 55 000 1234 · Email: referrals@opticare.local</div>
+      </td>
+      <td style="text-align: right; vertical-align: top;">
+        <h3 style="margin:0; color:#145C43;">MEDICAL REFERRAL LETTER</h3>
+        <div style="margin-top:4px;"><strong>Date:</strong> <%= new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %></div>
+        <div style="margin-top:4px;"><strong>Priority:</strong> <span style="font-weight:bold; color: <%= urgency === 'Emergency' ? '#B91C1C' : (urgency === 'Urgent' ? '#B45309' : '#15803D') %>;"><%= urgency.toUpperCase() %></span></div>
+      </td>
+    </tr>
+  </table>
+
+  <div class="meta-box">
+    <div>
+      <div><strong>PATIENT DETAILS:</strong></div>
+      <div>Name: <strong><%= patient.full_name %></strong></div>
+      <div>Patient ID: #<%= patient.id %></div>
+      <div>Phone: <%= patient.phone || 'N/A' %></div>
+      <div>Email: <%= patient.email || 'N/A' %></div>
+    </div>
+    <div>
+      <div><strong>REFERRED TO:</strong></div>
+      <div style="font-size: 15px; font-weight: 700; color: #0B3D2E;"><%= referredTo %></div>
+      <div style="margin-top: 4px;">Ref Code: REF-<%= patient.id %>-<%= Date.now().toString().slice(-4) %></div>
+    </div>
+  </div>
+
+  <div class="section-title">1. Reason for Clinical Referral</div>
+  <p style="margin: 8px 0 16px; font-size: 14.5px; font-weight: 500;"><%= reason %></p>
+
+  <div class="section-title">2. Clinical Examination Findings & History</div>
+  <div class="findings-box"><%= clinicalFindings %></div>
+
+  <% if (additionalNotes && additionalNotes.trim()) { %>
+    <div class="section-title">3. Additional Notes & Systemic History</div>
+    <p style="margin: 8px 0 16px;"><%= additionalNotes %></p>
+  <% } %>
+
+  <p style="margin-top: 24px; font-size: 13.5px;">
+    Thank you for reviewing this patient. Kindly share your management notes or discharge summary with our clinic once assessed.
+  </p>
+
+  <div class="signature-area">
+    <div>
+      <div>Sincerely,</div>
+      <div style="margin-top: 36px;" class="signature-line">
+        <strong><%= doctorName %></strong><br>
+        <span style="color: #64748B;">Optometrist / Clinician</span><br>
+        <span>OptiCare Eye Clinic</span>
+      </div>
+    </div>
+    <div style="text-align: right;">
+      <div style="width: 140px; height: 70px; border: 1px dashed #CBD5E1; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #94A3B8;">
+        Official Clinic Stamp
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

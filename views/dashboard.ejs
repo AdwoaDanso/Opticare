@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Dashboard · OptiCare</title>
+  <title>Dashboard | OptiCare</title>
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%230B3D2E%22/><text x=%2250%22 y=%2265%22 font-size=%2255%22 fill=%22white%22 text-anchor=%22middle%22 font-family=%22Arial%22>O</text></svg>" />
 </head>
@@ -10,93 +10,194 @@
   <%- include('partials/sidebar') %>
   <div class="main">
     <div class="topbar">
-  <div>
-    <h1 style="margin:0;">Dashboard</h1>
-    <div class="subtitle"><%= new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></div>
-  </div>
-  <div class="topbar-right">
-  <div class="avatar-circle"><%= currentUser.email.charAt(0).toUpperCase() %></div>
-</div>
-</div>
+      <div>
+        <h1 style="margin:0;">Dashboard</h1>
+        <div class="subtitle"><%= new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></div>
+      </div>
+      <div class="topbar-right">
+        <div class="avatar-circle"><%= currentUser.email.charAt(0).toUpperCase() %></div>
+      </div>
+    </div>
 
-    <% if (expiringCertificates.length > 0) { %>
+    <!-- Certificate alert (admin only) -->
+    <% if (expiringCertificates && expiringCertificates.length > 0 && role === 'admin') { %>
       <div class="card" style="background:#FFF4E5; border-left:4px solid #B8860B;">
-        <strong>⚠ Certificate Renewal Needed</strong>
+        <strong style="display:flex; align-items:center; gap:8px;">
+          <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#B8860B;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Certificate Renewal Needed
+        </strong>
         <% expiringCertificates.forEach(function(cert) { %>
-          <p style="margin:4px 0;"><%= cert.name %> — expires <%= cert.expiry_date %></p>
+          <p style="margin:4px 0;"><%= cert.name %> (Expires <%= cert.expiry_date %>)</p>
         <% }); %>
         <a href="/certificates">Go to Certificates</a>
       </div>
     <% } %>
 
-    <div class="stats-grid">
-  <div class="stat-card dark">
-    <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-    <div class="value"><%= totalPatients %></div>
-    <div class="label">Total Patients</div>
-  </div>
-  <div class="stat-card">
-    <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-    <div class="value"><%= waitingCount %></div>
-    <div class="label">Currently Waiting</div>
-  </div>
-  <div class="stat-card">
-    <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
-    <div class="value"><%= unpaidCount %></div>
-    <div class="label">Unpaid Invoices</div>
-  </div>
-  <div class="stat-card">
-    <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V21H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div>
-    <div class="value"><%= lowStockCount %></div>
-    <div class="label">Low Stock Items</div>
-  </div>
-  <div class="stat-card">
-    <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg></div>
-    <div class="value"><%= newClientsThisMonth %></div>
-    <div class="label">New Clients This Month</div>
-  </div>
-  <% if (role !== 'doctor') { %>
-  <div class="stat-card">
-    <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-    <div class="value">GHS <%= revenueThisMonth.toFixed(2) %></div>
-    <div class="label">Revenue This Month</div>
-  </div>
-<% } %>
-</div>
-
-<% if (role === 'doctor' || role === 'admin') { %>
-  <div class="card">
-    <h2 style="margin-top:0;">Waiting Patients — Call to Room</h2>
-    <% if (waitingQueue.length === 0) { %>
-      <div class="empty-state">No one is currently waiting.</div>
-    <% } else { %>
-      <% waitingQueue.forEach(function(entry) { %>
-        <div class="list-row">
-          <div class="name"><%= entry.full_name %></div>
-          <form action="/queue/<%= entry.id %>/call" method="POST" style="display:flex; gap:8px;">
-            <select name="room" style="padding:6px; border-radius:8px; border:1px solid var(--border);">
-              <option value="Room 1">Room 1</option>
-              <option value="Room 2">Room 2</option>
-            </select>
-            <button type="submit" class="btn btn-sm">Call In</button>
-          </form>
+    <!-- Near-expiry drug alert (admin & receptionist) -->
+    <% if (expiringDrugs && expiringDrugs.length > 0 && role !== 'doctor') { %>
+      <div class="card" style="background:#FEF3C7; border-left:4px solid #D97706;">
+        <strong style="display:flex; align-items:center; gap:8px; color:#92400E;">
+          <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#D97706;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Drug Expiry Alert: <%= expiringDrugs.length %> item(s) expiring within 30 days
+        </strong>
+        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
+          <% expiringDrugs.slice(0, 5).forEach(function(item) { %>
+            <span style="background:#fff; border:1px solid #FDE68A; border-radius:6px; padding:4px 10px; font-size:12px;">
+              <strong><%= item.name %></strong> (Expires <%= item.expiry_date %>)
+            </span>
+          <% }); %>
+          <% if (expiringDrugs.length > 5) { %>
+            <a href="/inventory" style="font-size:12px; color:#92400E; font-weight:600;">+<%= expiringDrugs.length - 5 %> more &rarr;</a>
+          <% } %>
         </div>
-      <% }); %>
+      </div>
     <% } %>
-  </div>
-<% } %>
 
+    <!-- Stat Cards -->
+    <div class="stats-grid">
+      <div class="stat-card dark">
+        <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="value"><%= totalPatients %></div>
+        <div class="label">Total Patients</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="value"><%= waitingCount %></div>
+        <div class="label">Currently Waiting</div>
+      </div>
+      <% if (role !== 'doctor') { %>
+        <div class="stat-card">
+          <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+          <div class="value"><%= unpaidCount %></div>
+          <div class="label">Unpaid Invoices</div>
+        </div>
+      <% } %>
+      <div class="stat-card">
+        <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V21H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div>
+        <div class="value"><%= lowStockCount %></div>
+        <div class="label">Low Stock Alerts</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg></div>
+        <div class="value"><%= newClientsThisMonth %></div>
+        <div class="label">New Clients This Month</div>
+      </div>
+      <% if (role === 'admin' && revenueThisMonth !== null) { %>
+        <div class="stat-card">
+          <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="value">GHS <%= Number(revenueThisMonth).toFixed(2) %></div>
+          <div class="label">Revenue This Month</div>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Receptionist / Admin: Patients Ready at Cashier / Pharmacy for Payment & Drug Collection -->
+    <% if (role !== 'doctor') { %>
+      <div class="card" style="border-left:4px solid #166534; background:#F8FAFC;">
+        <div class="page-header" style="margin-bottom:12px;">
+          <div>
+            <h2 style="margin:0; color:#0B3D2E; display:flex; align-items:center; gap:8px;">
+              <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#166534;"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              Cashier &amp; Pharmacy Counter
+            </h2>
+          </div>
+          <a href="/queue" class="btn btn-sm btn-secondary">View Live Queue</a>
+        </div>
+
+        <% if (!readyForBilling || readyForBilling.length === 0) { %>
+          <div class="empty-state" style="padding:16px;">No patients currently waiting at the cashier desk.</div>
+        <% } else { %>
+          <% readyForBilling.forEach(function(entry) { %>
+            <div class="list-row" style="background:#fff; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:8px; padding:12px 16px; align-items:center;">
+              <div style="flex:2;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="avatar-circle sm green"><%= entry.full_name.charAt(0).toUpperCase() %></span>
+                  <div>
+                    <span class="name" style="font-weight:700; font-size:14px;"><%= entry.full_name %></span>
+                    <span style="font-size:12px; color:#64748B; margin-left:6px;">#<%= entry.patient_id %> | <%= entry.phone || 'No phone on file' %></span>
+                  </div>
+                </div>
+                <div class="meta" style="margin-top:4px;">
+                  <% if (entry.drug_count > 0) { %>
+                    <span class="badge badge-success" style="font-size:10.5px; padding:2px 6px; display:inline-flex; align-items:center; gap:4px;">
+                      <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                      <%= entry.drug_count %> Medication(s) Prescribed
+                    </span>
+                  <% } else { %>
+                    <span class="badge" style="font-size:10.5px; padding:2px 6px; background:#E0E7FF; color:#3730A3; display:inline-flex; align-items:center; gap:4px;">
+                      <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                      Consultation Complete
+                    </span>
+                  <% } %>
+                  <span style="margin-left:8px; color:#64748B;">Discharged at: <%= entry.checked_in_at %></span>
+                </div>
+              </div>
+
+              <div style="text-align:right; margin-right:16px;">
+                <div style="font-size:11px; text-transform:uppercase; color:#64748B; font-weight:700;">Balance Due</div>
+                <div style="font-size:1.15rem; font-weight:800; color:#B91C1C;">
+                  GHS <%= Number(entry.unpaid_total).toFixed(2) %>
+                </div>
+              </div>
+
+              <div>
+                <a href="/patients/<%= entry.patient_id %>?tab=billing" class="btn btn-sm" style="padding:8px 14px; background:#22A366; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                  Open POS &amp; Collect Payment &rarr;
+                </a>
+              </div>
+            </div>
+          <% }); %>
+        <% } %>
+      </div>
+    <% } %>
+
+    <!-- Doctor / Admin: Waiting Patients Queue panel -->
+    <% if (role === 'doctor' || role === 'admin') { %>
+      <div class="card">
+        <div class="page-header" style="margin-bottom:12px;">
+          <h2 style="margin:0;">Waiting Patients: Call to Room &amp; Consult</h2>
+          <a href="/queue" class="btn btn-sm btn-secondary">View Full Queue</a>
+        </div>
+        <% if (waitingQueue.length === 0) { %>
+          <div class="empty-state">No one is currently waiting.</div>
+        <% } else { %>
+          <% waitingQueue.forEach(function(entry) { %>
+            <div class="list-row">
+              <div>
+                <div class="name"><a href="/patients/<%= entry.patient_id %>" style="font-weight:700;"><%= entry.full_name %></a></div>
+                <div class="meta">Checked in: <%= entry.checked_in_at %></div>
+              </div>
+              <form action="/queue/<%= entry.id %>/call" method="POST" style="display:flex; gap:8px; align-items:center;">
+                <select name="room" style="padding:6px; border-radius:8px; border:1px solid var(--border); font-size:12px;">
+                  <option value="Consultation Room 1">Room 1</option>
+                  <option value="Consultation Room 2">Room 2</option>
+                </select>
+                <button type="submit" class="btn btn-sm">
+                  <svg class="svg-icon sm" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  Call In &amp; Open Profile
+                </button>
+              </form>
+            </div>
+          <% }); %>
+        <% } %>
+      </div>
+    <% } %>
+
+
+    <!-- Charts: Monthly Consultations + Diagnosis Distribution -->
     <div style="display:flex; gap:24px; flex-wrap:wrap;">
-  <div class="card" style="flex:2; min-width:320px;">
-    <h2 style="margin-top:0;">New Patients (Last 6 Months)</h2>
-    <canvas id="patientsChart" height="220"></canvas>
-  </div>
-  <div class="card" style="flex:1; min-width:260px;">
-    <h2 style="margin-top:0;">Stock by Category</h2>
-    <canvas id="stockChart" height="220"></canvas>
-  </div>
-</div>
+      <div class="card" style="flex:2; min-width:320px;">
+        <h2 style="margin-top:0;">Monthly Consultations (Last 6 Months)</h2>
+        <canvas id="consultationsChart" height="220"></canvas>
+      </div>
+      <div class="card" style="flex:1; min-width:260px;">
+        <h2 style="margin-top:0;">Diagnosis Distribution</h2>
+        <canvas id="diagnosisChart" height="220"></canvas>
+      </div>
+    </div>
 
+    <!-- Recent Patients -->
     <div class="card">
       <div class="page-header" style="margin-bottom:12px;">
         <h2 style="margin:0;">Recently Registered</h2>
@@ -106,21 +207,24 @@
         <div class="empty-state">No patients yet.</div>
       <% } else { %>
         <% recentPatients.forEach(function(p) { %>
-  <div class="list-row">
-    <div class="avatar-circle sm green"><%= p.full_name.charAt(0).toUpperCase() %></div>
-    <div style="flex:1;">
-      <div class="name"><a href="/patients/<%= p.id %>"><%= p.full_name %></a></div>
-      <div class="meta"><%= p.phone %></div>
-    </div>
-  </div>
-<% }); %>
+          <div class="list-row">
+            <div class="avatar-circle sm green"><%= p.full_name.charAt(0).toUpperCase() %></div>
+            <div style="flex:1;">
+              <div class="name"><a href="/patients/<%= p.id %>"><%= p.full_name %></a></div>
+              <div class="meta"><%= p.phone %></div>
+            </div>
+          </div>
+        <% }); %>
       <% } %>
     </div>
 
+    <!-- Pending Reminders -->
     <div class="card">
       <div class="page-header" style="margin-bottom:12px;">
         <h2 style="margin:0;">Upcoming Reminders</h2>
-        <a href="/recall" class="btn btn-sm btn-secondary">View Recall List</a>
+        <% if (role !== 'doctor') { %>
+          <a href="/recall" class="btn btn-sm btn-secondary">View Recall List</a>
+        <% } %>
       </div>
       <% if (pendingReminders.length === 0) { %>
         <div class="empty-state">No pending reminders.</div>
@@ -128,54 +232,70 @@
         <% pendingReminders.forEach(function(r) { %>
           <div class="list-row">
             <div>
-              <div class="name"><%= r.full_name %></div>
-              <div class="meta"><%= r.note %> · Due <%= r.due_date %></div>
+              <div class="name"><a href="/patients/<%= r.patient_id %>"><%= r.full_name %></a></div>
+              <div class="meta"><%= r.note %> (Due: <%= r.due_date %>)</div>
             </div>
           </div>
         <% }); %>
       <% } %>
     </div>
 
+    <!-- Quick Links -->
     <div class="card">
       <h2 style="margin-top:0;">Quick Links</h2>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <a href="/report" class="btn btn-secondary">Monthly Report</a>
-        <a href="/inventory" class="btn btn-secondary">Inventory</a>
-        <a href="/certificates" class="btn btn-secondary">Certificates</a>
-        <a href="/queue" class="btn btn-secondary">Queue</a>
-        <a href="/export/patients" class="btn btn-secondary">Export Patients</a>
+        <a href="/" class="btn btn-secondary">Patients Directory</a>
+        <a href="/queue" class="btn btn-secondary">Patient Queue</a>
+        <a href="/inventory" class="btn btn-secondary">Inventory &amp; Stock</a>
+        <% if (role === 'admin') { %>
+          <a href="/report" class="btn btn-secondary">Monthly Report</a>
+          <a href="/certificates" class="btn btn-secondary">Certificates</a>
+          <a href="/settings" class="btn btn-secondary">Clinic Settings</a>
+          <a href="/export/patients" class="btn btn-secondary">Export Patients</a>
+        <% } %>
       </div>
     </div>
+
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  const monthlyPatients = <%- JSON.stringify(monthlyPatients) %>;
-  const stockByCategory = <%- JSON.stringify(stockByCategory) %>;
+  const monthlyConsultations = <%- JSON.stringify(monthlyConsultations) %>;
+  const diagnosisDistribution = <%- JSON.stringify(diagnosisDistribution) %>;
 
-  new Chart(document.getElementById('patientsChart'), {
+  new Chart(document.getElementById('consultationsChart'), {
     type: 'bar',
     data: {
-      labels: monthlyPatients.map(function(row) { return row.month; }),
+      labels: monthlyConsultations.map(function(row) { return row.month || 'N/A'; }),
       datasets: [{
-        label: 'New Patients',
-        data: monthlyPatients.map(function(row) { return row.count; }),
+        label: 'Consultations',
+        data: monthlyConsultations.map(function(row) { return row.count; }),
         backgroundColor: '#22A366',
         borderRadius: 6,
       }],
     },
-    options: { plugins: { legend: { display: false } } },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+    },
   });
 
-  new Chart(document.getElementById('stockChart'), {
-    type: 'pie',
+  const diagColors = ['#0B3D2E','#22A366','#7FD1A6','#B8E2CB','#F59E0B','#EF4444','#6366F1','#8B5CF6'];
+  new Chart(document.getElementById('diagnosisChart'), {
+    type: 'doughnut',
     data: {
-      labels: stockByCategory.map(function(row) { return row.category; }),
+      labels: diagnosisDistribution.map(function(row) { return row.category; }),
       datasets: [{
-        data: stockByCategory.map(function(row) { return row.total; }),
-        backgroundColor: ['#0B3D2E', '#22A366', '#7FD1A6', '#B8E2CB'],
+        data: diagnosisDistribution.map(function(row) { return row.count; }),
+        backgroundColor: diagColors,
+        borderWidth: 1,
       }],
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } }
+      }
     },
   });
 </script>

@@ -10,95 +10,160 @@
   <%- include('partials/sidebar') %>
   <div class="main">
     <div class="page-header">
-        <p><a href="/export/patients">⬇ Export Patients to CSV</a></p>
-      <h1>Welcome to <%= clinicName %></h1>
-      <div class="subtitle">Manage your patients below</div>
+      <div>
+        <h1 style="margin:0;">Patients Directory</h1>
+      </div>
+      <% if (currentUser && currentUser.role === 'admin') { %>
+        <p style="margin:0;">
+          <a href="/export/patients" class="btn btn-sm btn-secondary" style="display:inline-flex; align-items:center; gap:6px;">
+            <svg class="svg-icon sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </a>
+        </p>
+      <% } %>
     </div>
 
-    <% if (expiringCertificates.length > 0) { %>
-  <div class="card" style="background:#FFF4E5; border-left:4px solid #B8860B;">
-    <strong>⚠ Certificate Renewal Needed</strong>
-    <% expiringCertificates.forEach(function(cert) { %>
-      <p style="margin:4px 0;"><%= cert.name %> — expires <%= cert.expiry_date %></p>
-    <% }); %>
-    <a href="/certificates">Go to Certificates</a>
-  </div>
-<% } %>
+    <% if (expiringCertificates && expiringCertificates.length > 0 && currentUser && currentUser.role !== 'doctor') { %>
+      <div class="card" style="background:#FFF4E5; border-left:4px solid #B8860B;">
+        <strong style="display:flex; align-items:center; gap:8px;">
+          <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#B8860B;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Certificate Renewal Needed
+        </strong>
+        <% expiringCertificates.forEach(function(cert) { %>
+          <p style="margin:4px 0;"><%= cert.name %> (Expires <%= cert.expiry_date %>)</p>
+        <% }); %>
+        <a href="/certificates">Go to Certificates</a>
+      </div>
+    <% } %>
 
     <div class="stats-grid">
-  <div class="stat-card dark">
-    <div class="value"><%= totalPatients %></div>
-    <div class="label">Total Patients</div>
-  </div>
-  <div class="stat-card">
-    <div class="value"><%= waitingCount %></div>
-    <div class="label">Currently Waiting</div>
-  </div>
-  <div class="stat-card">
-    <div class="value"><%= unpaidCount %></div>
-    <div class="label">Unpaid Invoices</div>
-  </div>
-</div>
-
-   <div class="card">
-  <h2 style="margin-top:0;">Register a Patient</h2>
-
-  <% if (typeof duplicateWarning !== 'undefined' && duplicateWarning) { %>
-    <div class="card" style="background:#FFF4E5; border-left:4px solid #B8860B; margin-bottom:16px;">
-      <strong>⚠ Possible duplicate:</strong>
-      A patient named <strong><%= duplicateWarning.full_name %></strong>
-      (<%= duplicateWarning.phone %>) already exists.
-      <a href="/patients/<%= duplicateWarning.id %>">View existing record</a>
-      <form action="/patients" method="POST" style="margin-top:8px;">
-        <input type="hidden" name="full_name" value="<%= pendingFullName %>" />
-        <input type="hidden" name="phone" value="<%= pendingPhone %>" />
-        <input type="hidden" name="confirm_duplicate" value="1" />
-        <button type="submit" class="btn btn-sm btn-secondary">Create a new patient anyway</button>
-      </form>
-    </div>
-  <% } %>
-
-  <form action="/patients" method="POST">
-    <div class="form-row">
-      <div class="form-group">
-        <input type="text" name="full_name" placeholder="Full name" required />
+      <div class="stat-card dark">
+        <div class="value"><%= totalPatients %></div>
+        <div class="label">Total Patients</div>
       </div>
-      <div class="form-group">
-        <input type="text" name="phone" placeholder="Phone number" />
+      <div class="stat-card">
+        <div class="value"><%= waitingCount %></div>
+        <div class="label">Currently Waiting</div>
       </div>
-      <div class="form-group">
-  <input type="email" name="email" placeholder="Email (optional)" />
-</div>
-    </div>
-    <button type="submit" class="btn">Register</button>
-  </form>
-</div>
-
-    <div class="card">
-      <h2 style="margin-top:0;">Search Patients</h2>
-      <form action="/" method="GET" class="form-row">
-        <div class="form-group">
-          <input type="text" name="q" placeholder="Search by name..." />
+      <% if (currentUser && currentUser.role !== 'doctor' && unpaidCount !== null) { %>
+        <div class="stat-card">
+          <div class="value"><%= unpaidCount %></div>
+          <div class="label">Unpaid Invoices</div>
         </div>
-        <button type="submit" class="btn btn-secondary">Search</button>
+      <% } %>
+    </div>
+
+    <!-- Register Patient Form -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin:0; color:#0B3D2E;">Register New Patient</h2>
+      </div>
+
+      <% if (typeof duplicateWarning !== 'undefined' && duplicateWarning) { %>
+        <div class="card" style="background:#FFF4E5; border-left:4px solid #B8860B; margin-bottom:16px;">
+          <strong style="display:flex; align-items:center; gap:8px;">
+            <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#B8860B;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Possible duplicate detected:
+          </strong>
+          A patient named <strong><%= duplicateWarning.full_name %></strong> (<%= duplicateWarning.phone %>) already exists.
+          <a href="/patients/<%= duplicateWarning.id %>" style="margin-left:6px; font-weight:600;">View existing record</a>
+          <form action="/patients" method="POST" style="margin-top:8px;">
+            <input type="hidden" name="full_name" value="<%= pendingFullName %>" />
+            <input type="hidden" name="phone" value="<%= pendingPhone %>" />
+            <input type="hidden" name="confirm_duplicate" value="1" />
+            <button type="submit" class="btn btn-sm btn-secondary">Create new patient anyway</button>
+          </form>
+        </div>
+      <% } %>
+
+      <form action="/patients" method="POST">
+        <div class="form-row" style="margin-bottom:10px;">
+          <div class="form-group" style="flex:2;">
+            <label style="font-size:12px; font-weight:600;">Full Legal Name *</label>
+            <input type="text" name="full_name" placeholder="e.g. Ama Osei" required />
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label style="font-size:12px; font-weight:600;">Phone Number</label>
+            <input type="text" name="phone" placeholder="e.g. 0241234567" />
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label style="font-size:12px; font-weight:600;">Email (Optional)</label>
+            <input type="email" name="email" placeholder="patient@example.com" />
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-bottom:14px;">
+          <div class="form-group" style="flex:1;">
+            <label style="font-size:12px; font-weight:600;">Gender</label>
+            <select name="gender" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border);">
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label style="font-size:12px; font-weight:600;">Age</label>
+            <input type="number" name="age" placeholder="e.g. 35" />
+          </div>
+          <div class="form-group" style="flex:2;">
+            <label style="font-size:12px; font-weight:600;">Occupation / Visual Demands</label>
+            <input type="text" name="occupation" placeholder="e.g. Accountant, Driver, Student" />
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-bottom:14px;">
+          <div class="form-group" style="flex:1;">
+            <label style="font-size:12px; font-weight:600;">Emergency Contact Name</label>
+            <input type="text" name="emergency_contact_name" placeholder="e.g. Kofi Mensah (Brother)" />
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label style="font-size:12px; font-weight:600;">Emergency Contact Phone</label>
+            <input type="text" name="emergency_contact_phone" placeholder="e.g. 0244001122" />
+          </div>
+        </div>
+
+        <button type="submit" class="btn" style="padding:10px 24px;">Register Patient</button>
       </form>
     </div>
 
+    <!-- Search & Patients List -->
     <div class="card">
-      <h2 style="margin-top:0;">Patients</h2>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0; color:#0B3D2E;">Patient Directory</h2>
+        <form action="/" method="GET" style="display:flex; gap:8px; margin:0;">
+          <input type="text" name="q" placeholder="Search by name or phone..." style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); font-size:13px;" />
+          <button type="submit" class="btn btn-sm btn-secondary">Search</button>
+        </form>
+      </div>
+
       <% if (patients.length === 0) { %>
-        <div class="empty-state">No patients found.</div>
+        <div class="empty-state">No patients found in directory.</div>
       <% } else { %>
         <% patients.forEach(function(patient) { %>
-          <div class="list-row">
-            <div>
-              <div class="name"><a href="/patients/<%= patient.id %>"><%= patient.full_name %></a></div>
-              <div class="meta"><%= patient.phone %></div>
+          <div class="list-row" style="align-items:center;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div class="avatar-circle sm green"><%= patient.full_name.charAt(0).toUpperCase() %></div>
+              <div>
+                <div class="name"><a href="/patients/<%= patient.id %>" style="font-weight:700;"><%= patient.full_name %></a></div>
+                <div class="meta">
+                  ID: #<%= patient.id %> | <%= patient.phone || 'No phone on file' %>
+                  <% if (patient.gender || patient.age) { %> | <%= patient.gender || '' %> <%= patient.age ? '(' + patient.age + ' yrs)' : '' %><% } %>
+                  <% if (patient.occupation) { %> | <%= patient.occupation %><% } %>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <form action="/queue/checkin/<%= patient.id %>" method="POST" style="margin:0;">
+                <button type="submit" class="btn btn-sm btn-secondary" title="Check in to waiting queue">Check In</button>
+              </form>
+              <a href="/patients/<%= patient.id %>" class="btn btn-sm">Open Profile &rarr;</a>
             </div>
           </div>
         <% }); %>
       <% } %>
     </div>
+
   </div>
 </div>
 </body>

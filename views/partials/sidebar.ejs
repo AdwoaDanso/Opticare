@@ -1,19 +1,47 @@
 <div class="sidebar">
-  <div class="brand">OptiCare</div>
+  <div class="brand" style="display:flex; align-items:center; gap:10px;">
+    <svg class="svg-icon lg" viewBox="0 0 24 24" style="stroke:#22A366;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+    OptiCare
+  </div>
   <nav>
-    <a href="/dashboard" class="<%= currentPath.startsWith('/dashboard') ? 'active' : '' %>">Dashboard</a>
-    <a href="/" class="<%= (currentPath === '/' || currentPath.startsWith('/patients')) ? 'active' : '' %>">Patients</a>
-    <a href="/queue" class="<%= currentPath.startsWith('/queue') ? 'active' : '' %>">Queue</a>
+    <a href="/dashboard" class="<%= currentPath.startsWith('/dashboard') ? 'active' : '' %>">
+      <svg class="svg-icon sm" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a href="/" class="<%= (currentPath === '/' || currentPath.startsWith('/patients')) ? 'active' : '' %>">
+      <svg class="svg-icon sm" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Patients
+    </a>
+    <a href="/queue" class="<%= currentPath.startsWith('/queue') ? 'active' : '' %>">
+      <svg class="svg-icon sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Live Queue
+    </a>
 
     <% if (currentUser.role === 'admin' || currentUser.role === 'receptionist') { %>
-      <a href="/recall" class="<%= currentPath.startsWith('/recall') ? 'active' : '' %>">Recall</a>
+      <a href="/recall" class="<%= currentPath.startsWith('/recall') ? 'active' : '' %>">
+        <svg class="svg-icon sm" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Recalls
+      </a>
     <% } %>
 
-    <a href="/inventory" class="<%= currentPath.startsWith('/inventory') ? 'active' : '' %>">Inventory</a>
+    <a href="/inventory" class="<%= currentPath.startsWith('/inventory') ? 'active' : '' %>">
+      <svg class="svg-icon sm" viewBox="0 0 24 24"><path d="M21 8V21H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+      Inventory
+    </a>
 
     <% if (currentUser.role === 'admin') { %>
-      <a href="/report" class="<%= currentPath.startsWith('/report') ? 'active' : '' %>">Report</a>
-      <a href="/certificates" class="<%= currentPath.startsWith('/certificates') ? 'active' : '' %>">Certificates</a>
+      <a href="/report" class="<%= currentPath.startsWith('/report') ? 'active' : '' %>">
+        <svg class="svg-icon sm" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Reports
+      </a>
+      <a href="/certificates" class="<%= currentPath.startsWith('/certificates') ? 'active' : '' %>">
+        <svg class="svg-icon sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+        Certificates
+      </a>
+      <a href="/settings" class="<%= currentPath.startsWith('/settings') ? 'active' : '' %>">
+        <svg class="svg-icon sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </a>
     <% } %>
   </nav>
   <% if (currentUser) { %>

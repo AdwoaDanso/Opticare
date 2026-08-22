@@ -1,54 +1,393 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Monthly Report · OptiCare</title>
+  <title>Practice Analytics &amp; Reports | OptiCare</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    @media print {
+      body { background: #fff !important; padding: 0 !important; }
+      .sidebar, .no-print { display: none !important; }
+      .main { padding: 0 !important; width: 100% !important; }
+      .card { box-shadow: none !important; border: 1px solid #CBD5E1 !important; page-break-inside: avoid; }
+      .report-print-header { display: block !important; margin-bottom: 20px; border-bottom: 2px solid #0B3D2E; padding-bottom: 12px; }
+    }
+    .report-print-header { display: none; }
+
+    .rep-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .rep-kpi-card {
+      background: #fff;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .rep-kpi-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748B;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .rep-kpi-val {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #0F172A;
+      line-height: 1.2;
+    }
+    .rep-kpi-sub {
+      font-size: 12px;
+      color: #64748B;
+      margin-top: 4px;
+    }
+
+    .rep-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 900px) {
+      .rep-grid-2 { grid-template-columns: 1fr; }
+    }
+
+    /* Progress bar */
+    .rep-bar-wrap {
+      width: 100%;
+      height: 8px;
+      background: #E2E8F0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .rep-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.3s ease;
+    }
+
+    .rep-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #F1F5F9;
+    }
+    .rep-row:last-child {
+      border-bottom: none;
+    }
+  </style>
 </head>
 <body>
 <div class="layout">
   <%- include('partials/sidebar') %>
   <div class="main">
-    <div class="page-header">
-      <h1>Monthly Report</h1>
-      <div class="subtitle"><%= month %></div>
-    </div>
 
-    <form method="GET" action="/report" style="margin-bottom:20px;">
-      <input type="month" name="month" value="<%= month %>" onchange="this.form.submit()" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border);" />
-    </form>
-
-    <div class="stats-grid">
-      <div class="stat-card dark"><div class="value"><%= totalPatients %></div><div class="label">Total Patients (all time)</div></div>
-      <div class="stat-card"><div class="value"><%= newClients %></div><div class="label">New Clients This Month</div></div>
-      <div class="stat-card"><div class="value"><%= oldClients %></div><div class="label">Returning Clients This Month</div></div>
-      <div class="stat-card"><div class="value"><%= reviews %></div><div class="label">Reviews This Month</div></div>
-    </div>
-
-    <div class="card">
-      <h2 style="margin-top:0;">Sales by Category (This Month)</h2>
-      <% if (salesByCategory.length === 0) { %>
-        <div class="empty-state">No stock item sales recorded this month.</div>
-      <% } else { %>
-        <% salesByCategory.forEach(function(row) { %>
-          <div class="list-row">
-            <div class="name"><%= row.category %></div>
-            <div class="meta"><%= row.total_sold %> units sold · GHS <%= row.total_revenue %> revenue</div>
-          </div>
-        <% }); %>
-      <% } %>
-    </div>
-
-    <div class="card">
-      <h2 style="margin-top:0;">Stock Remaining (Current)</h2>
-      <% stockRemaining.forEach(function(row) { %>
-        <div class="list-row">
-          <div class="name"><%= row.category %></div>
-          <div class="meta"><%= row.total_remaining %> units remaining</div>
+    <%
+      const rev = (typeof revenueStats !== 'undefined' && revenueStats) ? revenueStats : { total_collected: 0, total_outstanding: 0, gross_billed: 0, paid_invoices_count: 0, unpaid_invoices_count: 0 };
+      const catBreak = (typeof categoryBreakdown !== 'undefined' && categoryBreakdown) ? categoryBreakdown : [];
+      const payBreak = (typeof paymentMethodBreakdown !== 'undefined' && paymentMethodBreakdown) ? paymentMethodBreakdown : [];
+      const topItems = (typeof topDispensedItems !== 'undefined' && topDispensedItems) ? topDispensedItems : [];
+      const remaining = (typeof stockRemaining !== 'undefined' && stockRemaining) ? stockRemaining : [];
+      const examsCount = (typeof totalExams !== 'undefined') ? totalExams : 0;
+      const newCount = (typeof newClients !== 'undefined') ? newClients : 0;
+      const oldCount = (typeof oldClients !== 'undefined') ? oldClients : 0;
+      const revCount = (typeof reviews !== 'undefined') ? reviews : 0;
+      const refCount = (typeof totalReferrals !== 'undefined') ? totalReferrals : 0;
+    %>
+    
+    <!-- Printable Header (Visible only on print) -->
+    <div class="report-print-header">
+      <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+        <div>
+          <h1 style="margin:0; color:#0B3D2E; font-size:22px;">OptiCare Eye Clinic | Practice Performance Report</h1>
+          <div style="font-size:12px; color:#64748B;">Comprehensive Clinical Activity &amp; Financial Summary</div>
         </div>
-      <% }); %>
+        <div style="text-align:right; font-size:12px; color:#475569;">
+          <div><strong>Period:</strong> <%= new Date(month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) %></div>
+          <div><strong>Printed:</strong> <%= new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) %></div>
+        </div>
+      </div>
     </div>
 
-    <a href="/">&larr; Back to patient list</a>
+    <!-- Top Action Bar (Screen Only) -->
+    <div class="page-header no-print">
+      <div>
+        <h1 style="margin:0; color:var(--forest);">Practice Performance &amp; Reports</h1>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <form method="GET" action="/report" style="margin:0; display:flex; gap:8px; align-items:center;">
+          <input 
+            type="month" 
+            name="month" 
+            value="<%= month %>" 
+            onchange="this.form.submit()" 
+            style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); font-size:13px; font-weight:600; background:#fff;" 
+          />
+        </form>
+        <button type="button" class="btn" onclick="window.print()" style="display:inline-flex; align-items:center; gap:6px;">
+          <svg class="svg-icon sm" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print Report
+        </button>
+        <a href="/" class="btn btn-secondary">&larr; Patient List</a>
+      </div>
+    </div>
+
+    <!-- Executive KPI Grid (6 Metric Cards) -->
+    <div class="rep-kpi-grid">
+      <!-- 1. Total Revenue Collected -->
+      <div class="rep-kpi-card" style="border-left:4px solid #166534; background:#F0FDF4;">
+        <div class="rep-kpi-label" style="color:#166534;">
+          <span>Revenue Collected</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#166534" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="rep-kpi-val" style="color:#166534;">
+          GHS <%= Number(rev.total_collected).toFixed(2) %>
+        </div>
+        <div class="rep-kpi-sub" style="color:#15803D;">
+          <%= rev.paid_invoices_count %> paid transactions
+        </div>
+      </div>
+
+      <!-- 2. Outstanding Balance -->
+      <div class="rep-kpi-card" style="border-left:4px solid <%= (rev.total_outstanding > 0) ? '#D97706' : '#94A3B8' %>;">
+        <div class="rep-kpi-label">
+          <span>Receivables Due</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#D97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="rep-kpi-val" style="color:<%= (rev.total_outstanding > 0) ? '#B45309' : '#0F172A' %>;">
+          GHS <%= Number(rev.total_outstanding).toFixed(2) %>
+        </div>
+        <div class="rep-kpi-sub">
+          <%= rev.unpaid_invoices_count %> pending invoice(s)
+        </div>
+      </div>
+
+      <!-- 3. Clinical Consultations -->
+      <div class="rep-kpi-card" style="border-left:4px solid #0B3D2E;">
+        <div class="rep-kpi-label">
+          <span>Exams Completed</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#0B3D2E" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <div class="rep-kpi-val" style="color:#0B3D2E;">
+          <%= examsCount %>
+        </div>
+        <div class="rep-kpi-sub">Clinical consultations</div>
+      </div>
+
+      <!-- 4. New Patient Intake -->
+      <div class="rep-kpi-card" style="border-left:4px solid #2563EB;">
+        <div class="rep-kpi-label">
+          <span>New Patients</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563EB" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+        </div>
+        <div class="rep-kpi-val" style="color:#1D4ED8;">
+          <%= newCount %>
+        </div>
+        <div class="rep-kpi-sub">Registered this month</div>
+      </div>
+
+      <!-- 5. Returning Patients -->
+      <div class="rep-kpi-card" style="border-left:4px solid #7C3AED;">
+        <div class="rep-kpi-label">
+          <span>Returning Visits</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#7C3AED" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        </div>
+        <div class="rep-kpi-val" style="color:#6D28D9;">
+          <%= oldCount %>
+        </div>
+        <div class="rep-kpi-sub"><%= revCount %> follow-up reviews</div>
+      </div>
+
+      <!-- 6. Medical Referrals -->
+      <div class="rep-kpi-card" style="border-left:4px solid #DC2626;">
+        <div class="rep-kpi-label">
+          <span>Referrals Issued</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#DC2626" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <div class="rep-kpi-val" style="color:#B91C1C;">
+          <%= refCount %>
+        </div>
+        <div class="rep-kpi-sub">Specialist transfers</div>
+      </div>
+    </div>
+
+    <!-- Main Analytics Grid (2 Columns) -->
+    <div class="rep-grid-2">
+      
+      <!-- Card 1: Revenue by Service & Department -->
+      <div class="card" style="margin-bottom:0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #E2E8F0; padding-bottom:10px;">
+          <h2 style="margin:0; font-size:1.15rem; color:#0B3D2E;">Revenue by Service Department</h2>
+          <span style="font-size:12px; font-weight:700; color:#166534;">
+            Gross: GHS <%= Number(rev.gross_billed).toFixed(2) %>
+          </span>
+        </div>
+
+        <% if (!catBreak || catBreak.length === 0) { %>
+          <div class="empty-state">No departmental billing records logged for this period.</div>
+        <% } else { 
+          const grandGross = Number(rev.gross_billed) || 1;
+        %>
+          <% catBreak.forEach(function(cat) { 
+            const pct = Math.min(100, Math.round((Number(cat.total_amount) / grandGross) * 100));
+          %>
+            <div class="rep-row">
+              <div style="flex:2; min-width:180px;">
+                <div style="font-weight:700; font-size:13.5px; color:#1E293B; display:flex; justify-content:space-between;">
+                  <span><%= cat.category || 'Consultation & Services' %></span>
+                  <span style="color:#64748B; font-weight:500; font-size:12px;"><%= cat.total_items %> line item(s)</span>
+                </div>
+                <div class="rep-bar-wrap">
+                  <div class="rep-bar-fill" style="width:<%= pct %>%; background:#0B3D2E;"></div>
+                </div>
+              </div>
+              <div style="text-align:right; margin-left:20px;">
+                <div style="font-weight:800; font-size:14px; color:#0B3D2E;">
+                  GHS <%= Number(cat.paid_amount || cat.total_amount).toFixed(2) %>
+                </div>
+                <div style="font-size:11px; color:#64748B;"><%= pct %>% of billing</div>
+              </div>
+            </div>
+          <% }); %>
+        <% } %>
+      </div>
+
+      <!-- Card 2: Payment Method Breakdown (Cash Flow Distribution) -->
+      <div class="card" style="margin-bottom:0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #E2E8F0; padding-bottom:10px;">
+          <h2 style="margin:0; font-size:1.15rem; color:#0B3D2E;">Collections by Payment Method</h2>
+          <span style="font-size:12px; font-weight:700; color:#166534;">
+            Collected: GHS <%= Number(rev.total_collected).toFixed(2) %>
+          </span>
+        </div>
+
+        <% if (!payBreak || payBreak.length === 0) { %>
+          <div class="empty-state">No paid transactions recorded for this period.</div>
+        <% } else { 
+          const grandCollected = Number(rev.total_collected) || 1;
+          const methodLabels = {
+            momo: 'Mobile Money (MTN MoMo / Telecel)',
+            cash: 'Cash Payment (At Counter)',
+            card: 'Credit / Debit Card (POS Terminal)',
+            insurance: 'Health Insurance Provider'
+          };
+          const methodColors = {
+            momo: '#D97706',
+            cash: '#166534',
+            card: '#2563EB',
+            insurance: '#7C3AED'
+          };
+        %>
+          <% payBreak.forEach(function(pm) { 
+            const key = (pm.payment_method || 'cash').toLowerCase();
+            const label = methodLabels[key] || pm.payment_method.toUpperCase();
+            const color = methodColors[key] || '#0B3D2E';
+            const pct = Math.min(100, Math.round((Number(pm.total_amount) / grandCollected) * 100));
+          %>
+            <div class="rep-row">
+              <div style="flex:2; min-width:180px;">
+                <div style="font-weight:700; font-size:13.5px; color:#1E293B; display:flex; justify-content:space-between;">
+                  <span><%= label %></span>
+                  <span style="color:#64748B; font-weight:500; font-size:12px;"><%= pm.txn_count %> txn(s)</span>
+                </div>
+                <div class="rep-bar-wrap">
+                  <div class="rep-bar-fill" style="width:<%= pct %>%; background:<%= color %>;"></div>
+                </div>
+              </div>
+              <div style="text-align:right; margin-left:20px;">
+                <div style="font-weight:800; font-size:14px; color:<%= color %>;">
+                  GHS <%= Number(pm.total_amount).toFixed(2) %>
+                </div>
+                <div style="font-size:11px; color:#64748B;"><%= pct %>% of collections</div>
+              </div>
+            </div>
+          <% }); %>
+        <% } %>
+      </div>
+
+    </div>
+
+    <!-- Secondary Grid: Top Products & Dispensary Summary -->
+    <div class="rep-grid-2">
+      
+      <!-- Top Dispensed Products -->
+      <div class="card" style="margin-bottom:0;">
+        <h2 style="margin-top:0; font-size:1.15rem; color:#0B3D2E; border-bottom:1px solid #E2E8F0; padding-bottom:10px; margin-bottom:14px;">
+          Top Dispensed Medications &amp; Optical Stock
+        </h2>
+
+        <% if (!topItems || topItems.length === 0) { %>
+          <div class="empty-state">No product/medication sales logged for this month.</div>
+        <% } else { %>
+          <% topItems.forEach(function(prod) { %>
+            <div class="rep-row">
+              <div>
+                <div style="font-weight:700; font-size:13.5px; color:#1E293B;"><%= prod.description %></div>
+                <div style="font-size:11.5px; color:#64748B; margin-top:2px;">
+                  Category: <%= prod.category || 'Dispensary' %>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <span class="badge badge-success" style="font-size:11.5px; font-weight:700;">
+                  <%= prod.total_qty %> unit(s) dispensed
+                </span>
+                <div style="font-weight:700; font-size:13px; color:#0B3D2E; margin-top:4px;">
+                  GHS <%= Number(prod.total_revenue).toFixed(2) %>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        <% } %>
+      </div>
+
+      <!-- Current Physical Stock Levels by Category -->
+      <div class="card" style="margin-bottom:0;">
+        <h2 style="margin-top:0; font-size:1.15rem; color:#0B3D2E; border-bottom:1px solid #E2E8F0; padding-bottom:10px; margin-bottom:14px;">
+          Current Inventory Levels
+        </h2>
+
+        <% if (!remaining || remaining.length === 0) { %>
+          <div class="empty-state">No items found in stock catalog.</div>
+        <% } else { 
+          const catNames = {
+            drug: 'Medications & Eye Drops',
+            frame: 'Spectacle Frames',
+            lens_solution: 'Contact Lens Solutions',
+            glasses_case: 'Cases & Care Accessories',
+            consumable: 'Clinic Consumables'
+          };
+        %>
+          <% remaining.forEach(function(s) { %>
+            <div class="rep-row">
+              <div>
+                <div style="font-weight:700; font-size:13.5px; color:#1E293B;">
+                  <%= catNames[s.category] || s.category.replace('_', ' ') %>
+                </div>
+                <div style="font-size:11.5px; color:#64748B; margin-top:2px;">
+                  <%= s.item_types || 0 %> distinct item SKU(s)
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <span class="badge <%= s.total_remaining <= 10 ? 'badge-danger' : 'badge-success' %>" style="font-size:12px; font-weight:700; padding:4px 12px;">
+                  <%= s.total_remaining %> units in stock
+                </span>
+              </div>
+            </div>
+          <% }); %>
+        <% } %>
+      </div>
+
+    </div>
+
   </div>
 </div>
 </body>

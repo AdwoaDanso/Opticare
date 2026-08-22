@@ -1,10 +1,12 @@
 {
   "name": "opticare-v2",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "2.0.0",
+  "description": "A Simplified Web-Based Eye Clinic Management System with Clinical Refraction, Live Queue, POS Billing, and SMS Alerts",
+  "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node app.js",
+    "seed": "node seed-ghana.js",
+    "create-user": "node create-user.js"
   },
   "keywords": [],
   "author": "",

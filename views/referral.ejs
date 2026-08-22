@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Referral · OptiCare</title>
+  <title>Referral | OptiCare</title>
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -9,18 +9,83 @@
   <%- include('partials/sidebar') %>
   <div class="main">
     <div class="page-header">
-      <h1>Referral Sheet — <%= patient.full_name %></h1>
+      <div>
+        <h1 style="margin:0;">Medical Referral Form</h1>
+        <div class="subtitle">Patient: <%= patient.full_name %> (ID #<%= patient.id %>)</div>
+      </div>
+      <a href="/patients/<%= patient.id %>" class="btn btn-secondary">&larr; Back to Patient Chart</a>
     </div>
 
-    <div class="card" style="max-width:480px;">
+    <div class="card" style="max-width:750px;">
       <form action="/patients/<%= patient.id %>/referral" method="POST">
-        <div class="form-group"><input type="text" name="referred_to" placeholder="Referred to (e.g. Dr. Mensah, Korle Bu Eye Clinic)" required /></div>
-        <div class="form-group"><textarea name="reason" placeholder="Reason for referral" rows="4" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border); font-family:inherit;"></textarea></div>
-        <button type="submit" class="btn">Generate Referral Sheet</button>
+        
+        <h3 style="margin-top:0; color:var(--forest);">1. Referral Destination & Urgency</h3>
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:16px; margin-bottom:16px;">
+          <div class="form-group">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Referred To (Specialist / Hospital / Clinic)</label>
+            <input type="text" name="referred_to" placeholder="e.g. Dr. K. Mensah, Korle Bu Eye Clinic / Specialist Eye Center" required />
+          </div>
+          <div class="form-group">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Urgency Level</label>
+            <select name="urgency" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border);">
+              <option value="Routine">Routine (Within 4-6 weeks)</option>
+              <option value="Urgent">Urgent (Within 1-2 weeks)</option>
+              <option value="Emergency">Emergency (Immediate / Today)</option>
+            </select>
+          </div>
+        </div>
+
+        <h3 style="color:var(--forest); margin-top:20px;">2. Reason for Referral</h3>
+        <div class="form-group" style="margin-bottom:16px;">
+          <textarea name="reason" placeholder="Primary reason for referral (e.g. Further evaluation and surgical management of mature cataract; Glaucoma workup; Retinal evaluation)..." rows="3" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border); font-family:inherit;" required><% if (latestExam.diagnosis) { %>Management of <%= latestExam.diagnosis %><% } %></textarea>
+        </div>
+
+        <h3 style="color:var(--forest); margin-top:20px;">3. Clinical Findings & Examination History (Auto-populated)</h3>
+        <div class="form-group" style="margin-bottom:16px;">
+          <%
+            let prefilledFindings = '';
+            if (latestExam && latestExam.id) {
+              prefilledFindings += 'EXAMINATION DATE: ' + (latestExam.exam_date || 'Recent') + '\n';
+              if (latestExam.chief_complaint) prefilledFindings += 'CHIEF COMPLAINT: ' + latestExam.chief_complaint + '\n';
+              prefilledFindings += 'VISUAL ACUITY:\n';
+              prefilledFindings += '  - Right Eye (OD): ' + (latestExam.visual_acuity_right || latestExam.va_unaided_right || 'N/A') + '\n';
+              prefilledFindings += '  - Left Eye (OS): ' + (latestExam.visual_acuity_left || latestExam.va_unaided_left || 'N/A') + '\n';
+              
+              if (latestExam.refraction_sphere_right || latestExam.refraction_sphere_left) {
+                prefilledFindings += 'REFRACTION:\n';
+                prefilledFindings += '  - OD: ' + (latestExam.refraction_sphere_right || 'Plano') + ' / ' + (latestExam.refraction_cyl_right || '') + ' x ' + (latestExam.refraction_axis_right || '') + ' (VA: ' + (latestExam.refraction_va_right || '') + ')\n';
+                prefilledFindings += '  - OS: ' + (latestExam.refraction_sphere_left || 'Plano') + ' / ' + (latestExam.refraction_cyl_left || '') + ' x ' + (latestExam.refraction_axis_left || '') + ' (VA: ' + (latestExam.refraction_va_left || '') + ')\n';
+                if (latestExam.refraction_add) prefilledFindings += '  - Add: ' + latestExam.refraction_add + '\n';
+              }
+
+              if (latestExam.eye_pressure_right || latestExam.eye_pressure_left) {
+                prefilledFindings += 'INTRAOCULAR PRESSURE (IOP):\n';
+                prefilledFindings += '  - OD: ' + (latestExam.eye_pressure_right || '—') + ' mmHg | OS: ' + (latestExam.eye_pressure_left || '—') + ' mmHg (' + (latestExam.iop_method || 'NCT') + ')\n';
+              }
+
+              if (latestExam.anterior_segment) prefilledFindings += 'ANTERIOR SEGMENT: ' + latestExam.anterior_segment + '\n';
+              if (latestExam.posterior_segment) prefilledFindings += 'POSTERIOR SEGMENT / FUNDUS: ' + latestExam.posterior_segment + '\n';
+              if (latestExam.diagnosis) prefilledFindings += 'DIAGNOSIS: ' + latestExam.diagnosis + (latestExam.icd10_code ? ' [' + latestExam.icd10_code + ']' : '') + '\n';
+              if (latestExam.management_plan) prefilledFindings += 'TREATMENT TO DATE: ' + latestExam.management_plan + '\n';
+            } else {
+              prefilledFindings = 'No previous examination on record. Clinical evaluation attached.';
+            }
+          %>
+          <label style="display:block; font-weight:600; margin-bottom:6px;">Clinical Findings & Summary</label>
+          <textarea name="clinical_findings" rows="7" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border); font-family:monospace, inherit; font-size:13px;"><%= prefilledFindings %></textarea>
+        </div>
+
+        <h3 style="color:var(--forest); margin-top:20px;">4. Additional Notes / Medical History</h3>
+        <div class="form-group" style="margin-bottom:20px;">
+          <textarea name="additional_notes" placeholder="Any known allergies, systemic history (e.g. Diabetes, Hypertension), or specific diagnostic requests..." rows="3" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border); font-family:inherit;"></textarea>
+        </div>
+
+        <button type="submit" class="btn" style="padding:12px 24px; font-size:15px; font-weight:600; display:inline-flex; align-items:center; gap:8px;">
+          <svg class="svg-icon sm" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Generate & Print Referral Letter
+        </button>
       </form>
     </div>
-
-    <a href="/patients/<%= patient.id %>">&larr; Back to patient</a>
   </div>
 </div>
 </body>

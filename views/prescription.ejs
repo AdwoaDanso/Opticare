@@ -1,19 +1,119 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Prescription · OptiCare</title>
+  <title>Optical Prescription Rx | <%= exam.full_name %> | OptiCare</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    @media print {
+      body { background: #fff; padding: 0; }
+      .no-print { display: none !important; }
+      .rx-card { box-shadow: none; border: none; padding: 0; }
+    }
+    .rx-card {
+      max-width: 650px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 36px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .rx-header { border-bottom: 2px solid #0B3D2E; padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; }
+    .rx-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+    .rx-table th, .rx-table td { border: 1px solid #CBD5E1; padding: 10px; text-align: center; }
+    .rx-table th { background: #F1F5F9; color: #0B3D2E; font-size: 13px; }
+    .rx-symbol { font-family: serif; font-size: 28px; font-weight: bold; color: #0B3D2E; margin-right: 8px; }
+  </style>
 </head>
-<body style="padding:40px;">
-  <div class="card" style="max-width:400px;">
-    <h2 style="margin-top:0; color:var(--forest);">OptiCare Clinic</h2>
-    <p><strong>Patient:</strong> <%= exam.full_name %></p>
-    <p><strong>Date:</strong> <%= exam.exam_date %></p>
-    <hr />
-    <p><strong>Right Eye:</strong> <%= exam.visual_acuity_right %></p>
-    <p><strong>Left Eye:</strong> <%= exam.visual_acuity_left %></p>
-    <p><strong>Diagnosis:</strong> <%= exam.diagnosis %></p>
-    <button class="btn" onclick="window.print()" style="margin-top:16px;">Print</button>
+<body style="background:#F0F1EC; padding:20px;">
+  <div class="rx-card">
+    <div class="no-print" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+      <a href="javascript:history.back()" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:6px;">
+        <svg class="svg-icon sm" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to Patient Chart
+      </a>
+      <button class="btn" onclick="window.print()" style="display:inline-flex; align-items:center; gap:6px;">
+        <svg class="svg-icon sm" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print Prescription
+      </button>
+    </div>
+
+    <div class="rx-header">
+      <div>
+        <h2 style="margin:0; color:#0B3D2E;">OptiCare Eye Clinic</h2>
+        <div style="font-size:12px; color:#64748B;">Optical & Medical Eyecare Prescription</div>
+        <div style="font-size:12px; color:#64748B;">Tel: +233 (0) 55 000 1234 · info@opticare.local</div>
+      </div>
+      <div style="text-align:right;">
+        <span class="rx-symbol">℞</span>
+        <div style="font-size:12px; color:#64748B; margin-top:4px;">Date: <%= exam.exam_date %></div>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; background:#F8FAFC; padding:12px 16px; border-radius:8px; margin-bottom:16px;">
+      <div><strong>Patient:</strong> <%= exam.full_name %></div>
+      <div><strong>Phone:</strong> <%= exam.phone || 'N/A' %></div>
+      <div><strong>Patient ID:</strong> #<%= exam.patient_id %></div>
+    </div>
+
+    <div style="font-weight:700; color:#0B3D2E; text-transform:uppercase; font-size:13px; letter-spacing:0.5px;">1. Spectacle / Refraction Prescription</div>
+    <table class="rx-table">
+      <thead>
+        <tr>
+          <th>Eye</th>
+          <th>Sphere (SPH)</th>
+          <th>Cylinder (CYL)</th>
+          <th>Axis</th>
+          <th>Near Add</th>
+          <th>Visual Acuity (VA)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="font-weight:700; background:#F8FAFC;">Right (OD)</td>
+          <td><%= exam.refraction_sphere_right || (exam.visual_acuity_right ? 'Plano' : 'N/A') %></td>
+          <td><%= exam.refraction_cyl_right || 'DS' %></td>
+          <td><%= exam.refraction_axis_right ? exam.refraction_axis_right + '°' : 'N/A' %></td>
+          <td><%= exam.refraction_add || 'N/A' %></td>
+          <td><%= exam.refraction_va_right || exam.visual_acuity_right || 'N/A' %></td>
+        </tr>
+        <tr>
+          <td style="font-weight:700; background:#F8FAFC;">Left (OS)</td>
+          <td><%= exam.refraction_sphere_left || (exam.visual_acuity_left ? 'Plano' : 'N/A') %></td>
+          <td><%= exam.refraction_cyl_left || 'DS' %></td>
+          <td><%= exam.refraction_axis_left ? exam.refraction_axis_left + '°' : 'N/A' %></td>
+          <td><%= exam.refraction_add || 'N/A' %></td>
+          <td><%= exam.refraction_va_left || exam.visual_acuity_left || 'N/A' %></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-bottom:16px;">
+      <strong>Diagnosis / Clinical Assessment:</strong>
+      <div style="padding:8px 12px; background:#F1F5F9; border-radius:6px; margin-top:4px;">
+        <%= exam.diagnosis %> <%= exam.icd10_code ? '(' + exam.icd10_code + ')' : '' %>
+      </div>
+    </div>
+
+    <% if (exam.management_plan && exam.management_plan.trim()) { %>
+      <div style="margin-bottom:20px;">
+        <strong>Prescribed Medications / Treatment Plan:</strong>
+        <div style="padding:10px 14px; background:#EAF5EF; border-left:4px solid #0B3D2E; border-radius:0 6px 6px 0; margin-top:4px; white-space:pre-wrap;">
+          <%= exam.management_plan %>
+        </div>
+      </div>
+    <% } %>
+
+    <div style="margin-top:40px; display:flex; justify-content:space-between; align-items:flex-end;">
+      <div style="width:220px; border-top:1px solid #000; padding-top:6px; font-size:12px;">
+        <strong>Attending Optometrist</strong><br>
+        <span>OptiCare Eye Clinic</span>
+      </div>
+      <div style="font-size:11px; color:#94A3B8; text-align:right;">
+        Prescription valid for 12-24 months from examination date.
+      </div>
+    </div>
   </div>
 </body>
 </html>

@@ -163,6 +163,103 @@ try {
   db.exec('ALTER TABLE queue_entries ADD COLUMN room TEXT');
 } catch (err) {}
 
+// Patient Demographics & Clinical History
+try { db.exec('ALTER TABLE patients ADD COLUMN gender TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE patients ADD COLUMN dob TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE patients ADD COLUMN age INTEGER'); } catch (err) {}
+try { db.exec('ALTER TABLE patients ADD COLUMN occupation TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE patients ADD COLUMN medical_history TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE patients ADD COLUMN allergies TEXT'); } catch (err) {}
+
+// Optometric Examination Columns
+try { db.exec('ALTER TABLE examinations ADD COLUMN chief_complaint TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN va_unaided_right TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN va_unaided_left TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN va_unaided_both TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN va_near_right TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN va_near_left TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN va_pinhole_right TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN va_pinhole_left TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN refraction_sphere_right TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN refraction_cyl_right TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN refraction_axis_right TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN refraction_va_right TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN refraction_sphere_left TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN refraction_cyl_left TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN refraction_axis_left TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN refraction_va_left TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN refraction_add TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN pd_distance TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN pd_near TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN iop_method TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN anterior_segment TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN posterior_segment TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN ocular_motility TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN icd10_code TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN icd10_desc TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN management_plan TEXT'); } catch (err) {}
+
+// Categorized Invoices Columns
+try { db.exec("ALTER TABLE invoices ADD COLUMN category TEXT DEFAULT 'Consultation'"); } catch (err) {}
+try { db.exec('ALTER TABLE invoices ADD COLUMN unit_price REAL DEFAULT 0'); } catch (err) {}
+try { db.exec('ALTER TABLE invoices ADD COLUMN quantity INTEGER DEFAULT 1'); } catch (err) {}
+try { db.exec('ALTER TABLE invoices ADD COLUMN discount REAL DEFAULT 0'); } catch (err) {}
+
+// Emergency Contact
+try { db.exec('ALTER TABLE patients ADD COLUMN emergency_contact_name TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE patients ADD COLUMN emergency_contact_phone TEXT'); } catch (err) {}
+
+// Objective Refraction columns (separate from subjective)
+try { db.exec('ALTER TABLE examinations ADD COLUMN obj_sphere_right TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN obj_cyl_right TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN obj_axis_right TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN obj_sphere_left TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN obj_cyl_left TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN obj_axis_left TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE examinations ADD COLUMN obj_method TEXT'); } catch (err) {}
+
+// Refraction additional notes
+try { db.exec('ALTER TABLE examinations ADD COLUMN refraction_notes TEXT'); } catch (err) {}
+
+// Prescribed drugs (JSON array of drug names)
+try { db.exec('ALTER TABLE examinations ADD COLUMN prescribed_drugs TEXT'); } catch (err) {}
+
+// Biomicroscopy structured grid (stored as JSON per structure)
+try { db.exec('ALTER TABLE examinations ADD COLUMN biomicroscopy TEXT'); } catch (err) {}
+
+// Expiry date on stock items
+try { db.exec('ALTER TABLE stock_items ADD COLUMN expiry_date TEXT'); } catch (err) {}
+
+// Referrals table — saved referral letters per patient
+db.exec(`
+  CREATE TABLE IF NOT EXISTS referrals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    patient_id INTEGER NOT NULL,
+    referred_to TEXT,
+    urgency TEXT,
+    reason TEXT,
+    clinical_findings TEXT,
+    additional_notes TEXT,
+    doctor_name TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patients(id)
+  )
+`);
+
+// Settings table — clinic-wide settings (admin only)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )
+`);
+
+// Default consultation fee if not set
+const existingFee = db.prepare("SELECT value FROM settings WHERE key = 'consultation_fee'").get();
+if (!existingFee) {
+  db.prepare("INSERT INTO settings (key, value) VALUES ('consultation_fee', '150.00')").run();
+}
+
 db.exec("UPDATE patients SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL");
 
 module.exports = db;
