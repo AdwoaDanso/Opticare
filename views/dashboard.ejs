@@ -169,11 +169,12 @@
                 <div class="meta">Checked in: <%= entry.checked_in_at %></div>
               </div>
               <form action="/queue/<%= entry.id %>/call" method="POST" style="display:flex; gap:8px; align-items:center;">
-                <select name="room" style="padding:6px; border-radius:8px; border:1px solid var(--border); font-size:12px;">
-                  <option value="Consultation Room 1">Room 1</option>
-                  <option value="Consultation Room 2">Room 2</option>
+                <select name="room" style="padding:6px 8px; border-radius:8px; border:1px solid var(--border); font-size:12px; font-weight:600;">
+                  <option value="Consultation Room 1" <%= (currentUser.room === 'Consultation Room 1') ? 'selected' : '' %>>Room 1</option>
+                  <option value="Consultation Room 2" <%= (currentUser.room === 'Consultation Room 2') ? 'selected' : '' %>>Room 2</option>
+                  <option value="Consultation Room 3" <%= (currentUser.room === 'Consultation Room 3') ? 'selected' : '' %>>Room 3</option>
                 </select>
-                <button type="submit" class="btn btn-sm">
+                <button type="submit" class="btn btn-sm" style="background:#166534;">
                   <svg class="svg-icon sm" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                   Call In &amp; Open Profile
                 </button>
@@ -240,12 +241,28 @@
       <% } %>
     </div>
 
+    <!-- Online Bookings & Cal.com Scheduling -->
+    <div class="card" style="background:#F0FDF4; border:1px solid #BBF7D0; border-left:4px solid #166534;">
+      <div class="page-header" style="margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#166534" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <h2 style="margin:0; color:#0B3D2E; font-size:1.15rem;">Online Appointments (Cal.com Cloud Sync)</h2>
+        </div>
+        <a href="/appointments" class="btn btn-sm" style="background:#166534;">Manage Appointments &rarr;</a>
+      </div>
+      <div style="font-size:13px; color:#14532D; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <span>Direct cloud synchronization enabled for online patient eye examination bookings and reminder alerts.</span>
+        <a href="/appointments" style="color:#0B3D2E; font-weight:700; text-decoration:underline;">View Bookings Calendar &rarr;</a>
+      </div>
+    </div>
+
     <!-- Quick Links -->
     <div class="card">
       <h2 style="margin-top:0;">Quick Links</h2>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <a href="/" class="btn btn-secondary">Patients Directory</a>
         <a href="/queue" class="btn btn-secondary">Patient Queue</a>
+        <a href="/appointments" class="btn btn-secondary">Appointments (Cal.com)</a>
         <a href="/inventory" class="btn btn-secondary">Inventory &amp; Stock</a>
         <% if (role === 'admin') { %>
           <a href="/report" class="btn btn-secondary">Monthly Report</a>

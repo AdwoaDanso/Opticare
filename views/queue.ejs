@@ -87,7 +87,7 @@
           <div class="list-row">
             <div>
               <div class="name"><a href="/patients/<%= entry.patient_id %>" style="font-weight:700;"><%= entry.full_name %></a></div>
-              <div class="meta"><%= entry.room || 'Consultation Room' %> | <a href="/patients/<%= entry.patient_id %>">Open Patient Clinical Chart &rarr;</a></div>
+              <div class="meta"><%= entry.room || 'Consultation Room' %> <%= entry.doctor_name ? '· Attending: ' + entry.doctor_name : '' %> | <a href="/patients/<%= entry.patient_id %>">Open Patient Clinical Chart &rarr;</a></div>
             </div>
             <form action="/queue/<%= entry.id %>/complete" method="POST" style="margin:0;">
               <button type="submit" class="btn btn-sm btn-secondary">Mark Consultation Complete</button>
@@ -113,11 +113,12 @@
               <span class="badge badge-danger">WAITING</span>
               <% if (currentUser && (currentUser.role === 'doctor' || currentUser.role === 'admin')) { %>
                 <form action="/queue/<%= entry.id %>/call" method="POST" style="display:flex; gap:6px; margin:0;">
-                  <select name="room" style="padding:6px 8px; border-radius:8px; border:1px solid var(--border); font-size:12px;">
-                    <option value="Consultation Room 1">Room 1</option>
-                    <option value="Consultation Room 2">Room 2</option>
+                  <select name="room" style="padding:6px 8px; border-radius:8px; border:1px solid var(--border); font-size:12px; font-weight:600;">
+                    <option value="Consultation Room 1" <%= (currentUser.room === 'Consultation Room 1') ? 'selected' : '' %>>Room 1</option>
+                    <option value="Consultation Room 2" <%= (currentUser.room === 'Consultation Room 2') ? 'selected' : '' %>>Room 2</option>
+                    <option value="Consultation Room 3" <%= (currentUser.room === 'Consultation Room 3') ? 'selected' : '' %>>Room 3</option>
                   </select>
-                  <button type="submit" class="btn btn-sm" style="display:inline-flex; align-items:center; gap:5px;">
+                  <button type="submit" class="btn btn-sm" style="display:inline-flex; align-items:center; gap:5px; background:#166534;">
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     Call In &amp; Open Profile
                   </button>

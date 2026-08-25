@@ -51,10 +51,21 @@
 * **Cash Flow Analysis**: Payment method share (MoMo vs. Cash vs. Card vs. Insurance).
 * **Official Print View**: Clean `@media print` layout for monthly practice performance reports.
 
-### 7. 🔒 Role-Based Access Control (RBAC)
+### 7. 🤖 OpenAI Clinical Intelligence & AI Copilot
+* **AI Differential Diagnosis**: Synthesizes Unaided VA, Refraction Rx, IOP Tonometry, and Biomicroscopy observations to suggest primary diagnoses and ICD-10 codes.
+* **Smart Treatment Recommendations**: Generates tailored management plans, ocular drug therapies, and patient lifestyle counseling.
+* **1-Click Clinical Insertion**: Allows attending doctors to preview and apply AI findings directly into the official medical record.
+* **Offline Knowledge Engine Fallback**: Automatically provides evidence-based optometric decision support if offline or quota-limited.
+
+### 8. 📅 Cal.com Online Appointment Scheduling
+* **Cloud Booking Synchronization**: Direct integration with Cal.com v2 API for online patient appointment bookings.
+* **Live Clinic Triage**: 1-click check-in from online Cal.com bookings directly into the live clinic queue.
+* **Receptionist Calendar Hub**: Overview of daily and upcoming bookings with automated patient reminders.
+
+### 9. 🔒 Role-Based Access Control (RBAC)
 * **Admin**: Full access to all clinical records, financial reports, clinic settings, certificate renewals, and staff management.
-* **Optometrist / Doctor**: Clinical examination suite, patient history, diagnostic uploads, prescription generation, and referrals.
-* **Receptionist / Cashier**: Patient registration, queue check-in, cashier POS counter, bill collection, and recall reminders.
+* **Optometrist / Doctor**: Clinical examination suite, AI Copilot, patient history, diagnostic uploads, prescription generation, and referrals.
+* **Receptionist / Cashier**: Patient registration, queue check-in, online bookings, cashier POS counter, bill collection, and recall reminders.
 
 ---
 
@@ -114,19 +125,20 @@
 
 ---
 
-## 🔑 Default Login Credentials
+## 🔑 Default Login Credentials & Consulting Rooms
 
-| Role | Email | Password |
-|---|---|---|
-| **Administrator** | `admin@opticare.local` | `password123` |
-| **Optometrist / Doctor** | `doctor@opticare.local` | `password123` |
-| **Receptionist / Cashier** | `receptionist@opticare.local` | `password123` |
+| Role | Staff Name | Email | Password | Assigned Station / Room |
+|---|---|---|---|---|
+| **Administrator** | System Administrator | `admin@opticare.local` | `password123` | Administration Office |
+| **Doctor 1 (Optometrist)** | Dr. Kwesi Asante Boateng, OD | `doctor@opticare.local` | `password123` | **Consultation Room 1** |
+| **Doctor 2 (Optometrist)** | Dr. Efua Serwaa Mensah, OD | `dr.mensah@opticare.local` | `password123` | **Consultation Room 2** |
+| **Receptionist / Cashier** | Adwoa Poku | `receptionist@opticare.local` | `password123` | Reception &amp; Cashier Desk |
 
-To create additional staff accounts:
-```bash
-node create-user.js <email> <password> <role>
-# Example: node create-user.js doctor2@opticare.local pass123 doctor
-```
+### 👥 Staff & Multi-Doctor Management
+Administrators can create and manage doctor accounts directly in the web UI under **Staff Logins** (`/staff`):
+- Assign individual doctors to dedicated consulting rooms (*Room 1, Room 2, Room 3*).
+- Reset passwords, change access roles, or deactivate logins.
+- When any doctor calls a patient from the queue, their name and room are automatically included in the patient's SMS.
 
 ---
 

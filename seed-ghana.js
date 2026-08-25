@@ -14,11 +14,12 @@ console.log('Cleared database tables.');
 const userExists = db.prepare('SELECT COUNT(*) AS count FROM users').get().count;
 if (userExists === 0) {
   const hash = bcrypt.hashSync('password123', 10);
-  const insUser = db.prepare('INSERT INTO users (email, password, role) VALUES (?, ?, ?)');
-  insUser.run('admin@opticare.local', hash, 'admin');
-  insUser.run('doctor@opticare.local', hash, 'doctor');
-  insUser.run('receptionist@opticare.local', hash, 'receptionist');
-  console.log('Created default user accounts (password: password123)');
+  const insUser = db.prepare('INSERT INTO users (name, email, password, role, room) VALUES (?, ?, ?, ?, ?)');
+  insUser.run('Dr. Kwesi Asante Boateng, OD', 'doctor@opticare.local', hash, 'doctor', 'Consultation Room 1');
+  insUser.run('Dr. Efua Serwaa Mensah, OD', 'dr.mensah@opticare.local', hash, 'doctor', 'Consultation Room 2');
+  insUser.run('Adwoa Poku (Reception Desk)', 'receptionist@opticare.local', hash, 'receptionist', 'Reception / Cashier Desk');
+  insUser.run('System Administrator', 'admin@opticare.local', hash, 'admin', 'Administration Office');
+  console.log('Created default multi-doctor staff accounts (password: password123)');
 }
 
 // 3. SEED INVENTORY & PHARMACEUTICAL STOCK

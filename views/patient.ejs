@@ -433,7 +433,52 @@
           </table>
 
           <!-- 6. Diagnosis & ICD-10 -->
-          <div class="section-header">6. Clinical Diagnosis &amp; ICD-10 Coding</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #CBD5E1; padding-bottom:6px; margin:24px 0 12px;">
+            <div class="section-header" style="border:none; margin:0; padding:0;">6. Clinical Diagnosis &amp; ICD-10 Coding</div>
+            <button type="button" id="aiAssistBtn" onclick="runAiClinicalAssistant()" class="btn btn-sm" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, #10B981, #0B3D2E); color:#fff; font-weight:700; border:none; box-shadow:0 2px 6px rgba(16,185,129,0.3);">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+              ✨ AI Clinical Copilot (OpenAI)
+            </button>
+          </div>
+
+          <!-- AI Recommendation Drawer (Hidden by default, opens when clicked) -->
+          <div id="aiSuggestionBox" style="display:none; background:#F0FDF4; border:1px solid #BBF7D0; border-left:4px solid #166534; border-radius:10px; padding:16px; margin-bottom:18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="badge badge-success" style="font-size:11px;">OptiCare AI Copilot</span>
+                <span id="aiSourceLabel" style="font-size:12px; color:#166534; font-weight:600;">Analyzing findings...</span>
+              </div>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('aiSuggestionBox').style.display='none'" style="padding:2px 8px; font-size:11px;">Close</button>
+            </div>
+
+            <div id="aiLoadingSpinner" style="display:none; text-align:center; padding:16px; color:#166534; font-size:13px; font-weight:600;">
+              ✨ Synthesizing optical refractions, tonometry &amp; clinical findings with AI...
+            </div>
+
+            <div id="aiResultContent" style="font-size:13px;">
+              <div style="margin-bottom:8px;">
+                <strong>Suggested Primary Diagnosis:</strong> 
+                <span id="aiDiagText" style="color:#0B3D2E; font-weight:700;"></span> 
+                (<span id="aiIcdText" style="color:#166534; font-weight:700;"></span>)
+              </div>
+              <div style="margin-bottom:8px;">
+                <strong style="color:#475569;">Differential Diagnoses:</strong> 
+                <span id="aiDiffsText" style="color:#334155;"></span>
+              </div>
+              <div style="margin-bottom:8px;">
+                <strong style="color:#475569;">Recommended Management &amp; Treatment:</strong>
+                <div id="aiPlanText" style="background:#fff; border:1px solid #DCFCE7; border-radius:6px; padding:8px 12px; margin-top:4px; color:#14532D;"></div>
+              </div>
+              <div style="margin-bottom:12px;">
+                <strong style="color:#475569;">Patient Care &amp; Lifestyle Advice:</strong>
+                <span id="aiAdviceText" style="color:#334155;"></span>
+              </div>
+              <button type="button" class="btn btn-sm" onclick="applyAiSuggestions()" style="background:#166534; font-weight:700;">
+                ✓ Apply AI Diagnosis &amp; Plan to Examination Form
+              </button>
+            </div>
+          </div>
+
           <div class="grid-2" style="margin-bottom:18px;">
             <div class="form-group">
               <label style="font-size:11px; font-weight:600;">Select Standard Ophthalmic ICD-10 Code:</label>
@@ -464,6 +509,75 @@
               <div class="form-group"><label style="font-size:11px; font-weight:600;">Diagnosis Name</label><input type="text" id="diagnosisInput" name="diagnosis" placeholder="e.g. Compound Myopic Astigmatism" required /></div>
             </div>
           </div>
+
+          <script>
+            let lastAiResult = null;
+
+            async function runAiClinicalAssistant() {
+              const box = document.getElementById('aiSuggestionBox');
+              const spinner = document.getElementById('aiLoadingSpinner');
+              const content = document.getElementById('aiResultContent');
+              const srcLbl = document.getElementById('aiSourceLabel');
+
+              box.style.display = 'block';
+              spinner.style.display = 'block';
+              content.style.display = 'none';
+              srcLbl.innerText = 'Consulting Clinical Intelligence...';
+
+              const payload = {
+                chiefComplaint: document.querySelector('textarea[name="chief_complaint"]')?.value || '',
+                vaUnaidedRight: document.querySelector('input[name="va_unaided_right"]')?.value || '',
+                vaUnaidedLeft: document.querySelector('input[name="va_unaided_left"]')?.value || '',
+                refractionRight: (document.querySelector('input[name="refraction_sphere_right"]')?.value || '0.00') + ' / ' + (document.querySelector('input[name="refraction_cyl_right"]')?.value || '0.00') + ' x ' + (document.querySelector('input[name="refraction_axis_right"]')?.value || '0'),
+                refractionLeft: (document.querySelector('input[name="refraction_sphere_left"]')?.value || '0.00') + ' / ' + (document.querySelector('input[name="refraction_cyl_left"]')?.value || '0.00') + ' x ' + (document.querySelector('input[name="refraction_axis_left"]')?.value || '0'),
+                iopRight: document.querySelector('input[name="eye_pressure_right"]')?.value || '14',
+                iopLeft: document.querySelector('input[name="eye_pressure_left"]')?.value || '14',
+                iopMethod: document.querySelector('select[name="iop_method"]')?.value || 'NCT',
+                patientAge: '<%= patient.age || "" %>',
+                medicalHistory: '<%= patient.medical_history || "" %>'
+              };
+
+              try {
+                const res = await fetch('/api/ai/clinical-assist', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload)
+                });
+                const json = await res.json();
+                if (json.success && json.data) {
+                  lastAiResult = json.data;
+                  srcLbl.innerText = json.source;
+                  document.getElementById('aiDiagText').innerText = json.data.primaryDiagnosis || 'Refractive Anomaly';
+                  document.getElementById('aiIcdText').innerText = json.data.icd10Code || 'H52.2';
+                  document.getElementById('aiDiffsText').innerText = (json.data.differentialDiagnoses || []).join(', ');
+                  document.getElementById('aiPlanText').innerText = json.data.managementPlan || '';
+                  document.getElementById('aiAdviceText').innerText = json.data.patientCareAdvice || '';
+                  spinner.style.display = 'none';
+                  content.style.display = 'block';
+                }
+              } catch (err) {
+                spinner.style.display = 'none';
+                srcLbl.innerText = 'Error analyzing data';
+              }
+            }
+
+            function applyAiSuggestions() {
+              if (!lastAiResult) return;
+              if (lastAiResult.primaryDiagnosis) {
+                document.getElementById('diagnosisInput').value = lastAiResult.primaryDiagnosis;
+              }
+              if (lastAiResult.icd10Code) {
+                document.getElementById('icd10Code').value = lastAiResult.icd10Code;
+              }
+              if (lastAiResult.managementPlan) {
+                const mgtEl = document.querySelector('textarea[name="management_plan"]');
+                if (mgtEl) {
+                  mgtEl.value = lastAiResult.managementPlan + (lastAiResult.patientCareAdvice ? '\n\nPatient Advice: ' + lastAiResult.patientCareAdvice : '');
+                }
+              }
+              document.getElementById('aiSuggestionBox').style.display = 'none';
+            }
+          </script>
 
           <!-- 7. Drugs Prescribed & Management Plan -->
           <div class="section-header">7. Medications Prescribed &amp; Management Plan</div>

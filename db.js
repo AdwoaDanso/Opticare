@@ -254,6 +254,19 @@ db.exec(`
   )
 `);
 
+// Multi-Doctor & Staff Login Enhancements
+try { db.exec('ALTER TABLE users ADD COLUMN name TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE users ADD COLUMN room TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP'); } catch (err) {}
+try { db.exec('ALTER TABLE queue_entries ADD COLUMN doctor_name TEXT'); } catch (err) {}
+
+// Set initial names and rooms on default users if empty
+try {
+  db.prepare("UPDATE users SET name = 'Dr. Kwesi Asante Boateng, OD', room = 'Consultation Room 1' WHERE email = 'doctor@opticare.local' AND (name IS NULL OR name = '')").run();
+  db.prepare("UPDATE users SET name = 'System Administrator' WHERE email = 'admin@opticare.local' AND (name IS NULL OR name = '')").run();
+  db.prepare("UPDATE users SET name = 'Front Desk Receptionist' WHERE email = 'receptionist@opticare.local' AND (name IS NULL OR name = '')").run();
+} catch (e) {}
+
 // Default consultation fee if not set
 const existingFee = db.prepare("SELECT value FROM settings WHERE key = 'consultation_fee'").get();
 if (!existingFee) {

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Appointments &amp; Online Bookings | OptiCare</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%230B3D2E%22/><text x=%2250%22 y=%2265%22 font-size=%2255%22 fill=%22white%22 text-anchor=%22middle%22 font-family=%22Arial%22>O</text></svg>" />
+  <style>
+    .cal-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .cal-card {
+      background: #fff;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .cal-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: #EAF5EF;
+      color: #0B3D2E;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .cal-val { font-size: 1.5rem; font-weight: 800; color: #0F172A; line-height: 1.2; }
+    .cal-lbl { font-size: 12px; color: #64748B; font-weight: 500; }
+    .cal-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #ECFDF5;
+      color: #065F46;
+      border: 1px solid #A7F3D0;
+    }
+    .cal-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10B981;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('partials/sidebar') %>
+  <div class="main">
+    
+    <!-- Top Header -->
+    <div class="page-header" style="margin-bottom:20px;">
+      <div>
+        <h1 style="margin:0 0 4px; color:#0B3D2E;">Appointments &amp; Online Scheduling</h1>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="cal-status-badge">
+            <span class="cal-dot"></span>
+            Cal.com Cloud Sync Active
+          </span>
+          <span style="font-size:12px; color:#64748B;">Automated patient booking &amp; reminder integration</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button type="button" class="btn" onclick="toggleElement('embedBooking')" style="display:inline-flex; align-items:center; gap:6px;">
+          <svg class="svg-icon sm" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          + Schedule New Appointment
+        </button>
+        <a href="/dashboard" class="btn btn-secondary">&larr; Dashboard</a>
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="cal-stats">
+      <div class="cal-card">
+        <div class="cal-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div>
+          <div class="cal-val"><%= bookings ? bookings.length : 0 %></div>
+          <div class="cal-lbl">Total Synced Bookings</div>
+        </div>
+      </div>
+
+      <div class="cal-card">
+        <div class="cal-icon" style="background:#EFF6FF; color:#1D4ED8;">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div>
+          <div class="cal-val"><%= todayBookings ? todayBookings.length : 0 %></div>
+          <div class="cal-lbl">Appointments Today</div>
+        </div>
+      </div>
+
+      <div class="cal-card">
+        <div class="cal-icon" style="background:#FEF3C7; color:#B45309;">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+        </div>
+        <div>
+          <div class="cal-val"><%= upcomingBookings ? upcomingBookings.length : 0 %></div>
+          <div class="cal-lbl">Upcoming Scheduled</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collapsible Schedule / Embed Booking Panel -->
+    <div id="embedBooking" class="card" style="display:none; background:#F8FAFC; border:1px solid #CBD5E1; margin-bottom:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #E2E8F0; padding-bottom:8px;">
+        <h3 style="margin:0; color:#0B3D2E;">Schedule Patient Appointment (Cal.com)</h3>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="toggleElement('embedBooking')">Close</button>
+      </div>
+      <p style="font-size:13px; color:#64748B; margin-top:0;">
+        You can share your direct clinic booking link with patients via SMS, or schedule an eye exam directly below.
+      </p>
+      <div style="background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <div>
+          <strong style="color:#0B3D2E; font-size:13px;">Public Patient Booking Link:</strong>
+          <div style="font-size:12px; color:#64748B; margin-top:2px;">https://cal.com/opticare-clinic</div>
+        </div>
+        <a href="https://cal.com" target="_blank" class="btn btn-sm" style="background:#166534;">Open Cal.com Portal &rarr;</a>
+      </div>
+    </div>
+
+    <!-- Synced Bookings List -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #E2E8F0; padding-bottom:12px;">
+        <h2 style="margin:0; color:#0B3D2E; font-size:1.15rem;">Scheduled Eye Examinations &amp; Consultations</h2>
+        <a href="/appointments?refresh=1" class="btn btn-sm btn-secondary" style="display:inline-flex; align-items:center; gap:6px;">
+          <svg class="svg-icon sm" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          Sync with Cal.com
+        </a>
+      </div>
+
+      <% if (!bookings || bookings.length === 0) { %>
+        <div class="empty-state" style="padding:40px 20px;">
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#94A3B8" stroke-width="1.5" style="margin-bottom:12px;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <div style="font-weight:700; color:#334155; font-size:15px;">No Cal.com Bookings Recorded Yet</div>
+          <div style="font-size:13px; color:#64748B; margin-top:4px; max-width:480px; margin-left:auto; margin-right:auto;">
+            When patients book an appointment online via your Cal.com link, their details will automatically sync here and can be checked into the live queue with one click.
+          </div>
+        </div>
+      <% } else { %>
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+              <tr style="background:#F8FAFC; border-bottom:2px solid #CBD5E1; color:#475569; text-align:left;">
+                <th style="padding:10px 14px;">Patient Name</th>
+                <th style="padding:10px 14px;">Scheduled Date &amp; Time</th>
+                <th style="padding:10px 14px;">Service / Consultation</th>
+                <th style="padding:10px 14px;">Status</th>
+                <th style="padding:10px 14px; text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% bookings.forEach(function(b) { %>
+                <tr style="border-bottom:1px solid #E2E8F0;">
+                  <td style="padding:12px 14px;">
+                    <strong style="color:#0F172A; display:block;"><%= b.attendees && b.attendees[0] ? b.attendees[0].name : (b.title || 'Patient') %></strong>
+                    <span style="font-size:11.5px; color:#64748B;"><%= b.attendees && b.attendees[0] ? b.attendees[0].email : '' %></span>
+                  </td>
+                  <td style="padding:12px 14px;">
+                    <strong><%= b.startTime ? new Date(b.startTime).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Scheduled' %></strong>
+                    <div style="font-size:11.5px; color:#64748B;">
+                      <%= b.startTime ? new Date(b.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '' %>
+                    </div>
+                  </td>
+                  <td style="padding:12px 14px;">
+                    <span class="badge" style="background:#EAF5EF; color:#0B3D2E; font-weight:600;">
+                      <%= b.title || 'Comprehensive Eye Examination' %>
+                    </span>
+                  </td>
+                  <td style="padding:12px 14px;">
+                    <span class="badge badge-success" style="font-size:11px;">
+                      <%= (b.status || 'CONFIRMED').toUpperCase() %>
+                    </span>
+                  </td>
+                  <td style="padding:12px 14px; text-align:right;">
+                    <a href="/queue" class="btn btn-sm" style="padding:6px 12px; font-size:11.5px; background:#166534;">
+                      Check-In to Queue &rarr;
+                    </a>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

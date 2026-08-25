@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const db = require('./db');
 const session = require('express-session');
@@ -9,10 +10,11 @@ const { checkForDecline } = require('./vision');
 const app = express();
 app.set('view engine', 'ejs');
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 app.use(express.static('public'));
 
 app.use(session({
-  secret: 'change-this-later',
+  secret: process.env.SESSION_SECRET || 'opticare-secret-key-2026',
   resave: false,
   saveUninitialized: false,
 }));
@@ -964,21 +966,29 @@ async function dispatchSMS(patientId, recipientPhone, messageBody) {
     
     // Gateway A: Arkesel (Ghana)
     if (process.env.ARKESEL_API_KEY) {
-      const arkeselUrl = `https://sms.arkesel.com/api/v2/sms/send`;
-      const response = await fetch(arkeselUrl, {
-        method: 'POST',
-        headers: {
-          'api-key': process.env.ARKESEL_API_KEY,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sender: senderId,
-          message: messageBody,
-          recipients: [cleanPhone]
-        })
-      });
-      const data = await response.json();
-      console.log('[Arkesel Gateway Response]:', data);
+      try {
+        const arkeselUrl = `https://sms.arkesel.com/api/v2/sms/send`;
+        const response = await fetch(arkeselUrl, {
+          method: 'POST',
+          headers: {
+            'api-key': process.env.ARKESEL_API_KEY,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            sender: senderId,
+            message: messageBody,
+            recipients: [cleanPhone]
+          })
+        });
+        const data = await response.json();
+        console.log('[Arkesel Gateway Response]:', data);
+      } catch (e) {
+        // Fallback to Arkesel v1 query endpoint
+        const v1Url = `https://sms.arkesel.com/sms/api?action=send-sms&api_key=${process.env.ARKESEL_API_KEY}&to=${cleanPhone}&from=${encodeURIComponent(senderId)}&sms=${encodeURIComponent(messageBody)}`;
+        const res1 = await fetch(v1Url);
+        const data1 = await res1.json();
+        console.log('[Arkesel v1 Gateway Response]:', data1);
+      }
       return true;
     }
 
@@ -1085,7 +1095,11 @@ app.post('/queue/:id/complete', requireLogin, (req, res) => {
 
 
 app.post('/queue/:id/call', requireLogin, requireRole('admin', 'doctor'), (req, res) => {
-  const room = req.body.room || 'Consultation Room 1';
+  const user = res.locals.currentUser;
+  const doctorName = (user && user.name) ? user.name : ((user && user.email) ? user.email : 'the attending optometrist');
+  const defaultRoom = (user && user.room) ? user.room : 'Consultation Room 1';
+  const room = req.body.room || defaultRoom;
+
   const entry = db.prepare(`
     SELECT queue_entries.*, patients.full_name, patients.phone
     FROM queue_entries
@@ -1093,13 +1107,13 @@ app.post('/queue/:id/call', requireLogin, requireRole('admin', 'doctor'), (req, 
     WHERE queue_entries.id = ?
   `).get(req.params.id);
 
-  db.prepare("UPDATE queue_entries SET status = 'in_progress', room = ? WHERE id = ?")
-    .run(room, req.params.id);
+  db.prepare("UPDATE queue_entries SET status = 'in_progress', room = ?, doctor_name = ? WHERE id = ?")
+    .run(room, doctorName, req.params.id);
 
-  // Automated SMS on Calling to Consultation Room
+  // Automated SMS on Calling to Consultation Room (with Doctor Name)
   if (entry && entry.phone) {
     const firstName = entry.full_name.split(' ')[0] || entry.full_name;
-    const smsText = `Hello ${firstName}, you are now being called to ${room} for your eye consultation at OptiCare Eye Clinic. Please proceed inside.`;
+    const smsText = `Hello ${firstName}, you are now being called to ${room} to see ${doctorName} for your eye consultation at OptiCare Eye Clinic. Please proceed inside.`;
     dispatchSMS(entry.patient_id, entry.phone, smsText);
   }
 
@@ -1368,6 +1382,68 @@ app.post('/certificates/:id/renew', requireLogin, requireRole('admin'), (req, re
   res.redirect('/certificates');
 });
 
+// ===== Staff & Doctor Login Management (Admin Only) =====
+
+app.get('/staff', requireLogin, requireRole('admin'), (req, res) => {
+  const users = db.prepare('SELECT id, email, name, role, room, created_at FROM users ORDER BY role, name').all();
+  res.render('staff', { users: users });
+});
+
+app.post('/staff', requireLogin, requireRole('admin'), (req, res) => {
+  const { name, email, role, room, password } = req.body;
+  
+  if (!email || !password || !role) {
+    return res.redirect('/staff?error=missing_fields');
+  }
+
+  const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim().toLowerCase());
+  if (existing) {
+    return res.redirect('/staff?error=duplicate_email');
+  }
+
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  db.prepare(`
+    INSERT INTO users (name, email, password, role, room, created_at)
+    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+  `).run(name ? name.trim() : null, email.trim().toLowerCase(), hashedPassword, role, room || 'Consultation Room 1');
+
+  res.redirect('/staff?created=1');
+});
+
+app.post('/staff/:id/update', requireLogin, requireRole('admin'), (req, res) => {
+  const staffId = req.params.id;
+  const { name, email, role, room, new_password } = req.body;
+
+  if (new_password && new_password.trim().length > 0) {
+    const hashedPassword = bcrypt.hashSync(new_password.trim(), 10);
+    db.prepare(`
+      UPDATE users
+      SET name = ?, email = ?, role = ?, room = ?, password = ?
+      WHERE id = ?
+    `).run(name ? name.trim() : null, email.trim().toLowerCase(), role, room, hashedPassword, staffId);
+  } else {
+    db.prepare(`
+      UPDATE users
+      SET name = ?, email = ?, role = ?, room = ?
+      WHERE id = ?
+    `).run(name ? name.trim() : null, email.trim().toLowerCase(), role, room, staffId);
+  }
+
+  res.redirect('/staff?updated=1');
+});
+
+app.post('/staff/:id/delete', requireLogin, requireRole('admin'), (req, res) => {
+  const staffId = req.params.id;
+  
+  // Prevent admin from deleting own account
+  if (res.locals.currentUser && res.locals.currentUser.id === parseInt(staffId)) {
+    return res.redirect('/staff?error=cannot_delete_self');
+  }
+
+  db.prepare('DELETE FROM users WHERE id = ?').run(staffId);
+  res.redirect('/staff?deleted=1');
+});
+
 // ===== Files (scans/images) =====
 
 app.post('/patients/:id/files', requireLogin, requireRole('admin', 'doctor'), upload.single('file'), (req, res) => {
@@ -1396,6 +1472,161 @@ app.get('/export/patients', requireLogin, requireRole('admin'), (req, res) => {
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="patients.csv"');
   res.send(csv);
+});
+
+// ===== Appointments (Cal.com Live Sync) =====
+
+app.get('/appointments', requireLogin, async (req, res) => {
+  let bookings = [];
+  let todayBookings = [];
+  let upcomingBookings = [];
+
+  if (process.env.CALCOM_API_KEY) {
+    try {
+      const response = await fetch('https://api.cal.com/v2/bookings', {
+        headers: {
+          'Authorization': 'Bearer ' + process.env.CALCOM_API_KEY,
+          'cal-api-version': '2024-08-13'
+        }
+      });
+      const result = await response.json();
+      if (result && Array.isArray(result.data)) {
+        bookings = result.data;
+      } else if (result && Array.isArray(result.bookings)) {
+        bookings = result.bookings;
+      }
+    } catch (calErr) {
+      console.error('[Cal.com API Sync Error]:', calErr.message);
+    }
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  todayBookings = bookings.filter(b => b.startTime && b.startTime.startsWith(todayStr));
+  upcomingBookings = bookings.filter(b => b.startTime && new Date(b.startTime) >= new Date());
+
+  res.render('appointments', {
+    bookings: bookings,
+    todayBookings: todayBookings,
+    upcomingBookings: upcomingBookings
+  });
+});
+
+// ===== OpenAI Clinical Diagnostic & Management Assistant =====
+
+app.post('/api/ai/clinical-assist', requireLogin, requireRole('admin', 'doctor'), async (req, res) => {
+  const {
+    chiefComplaint,
+    vaUnaidedRight,
+    vaUnaidedLeft,
+    refractionRight,
+    refractionLeft,
+    iopRight,
+    iopLeft,
+    iopMethod,
+    biomicroscopyFindings,
+    patientAge,
+    medicalHistory
+  } = req.body;
+
+  const clinicalContext = `
+Patient Age: ${patientAge || 'Adult'}
+Medical/Systemic History: ${medicalHistory || 'None reported'}
+Chief Complaint: ${chiefComplaint || 'Routine vision examination'}
+Visual Acuity Unaided: OD ${vaUnaidedRight || '6/6'}, OS ${vaUnaidedLeft || '6/6'}
+Refraction Rx: OD ${refractionRight || 'Plano'}, OS ${refractionLeft || 'Plano'}
+Intraocular Pressure (IOP): OD ${iopRight || '14'} mmHg, OS ${iopLeft || '14'} mmHg (${iopMethod || 'NCT'})
+Slit Lamp / Biomicroscopy / Ophthalmoscopy Notes: ${biomicroscopyFindings || 'Clear cornea, quiet anterior chamber, normal disc/macula'}
+`.trim();
+
+  // 1. Try OpenAI Live API (if OPENAI_API_KEY is available)
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an advanced clinical optometry decision support AI for OptiCare Eye Clinic. Provide concise, professional, evidence-based differential diagnosis, ICD-10 diagnostic code suggestions, clinical management plan with medications/lifestyle advice, and follow-up timeline based on the examination findings. Return strictly a valid JSON object matching this structure: {"primaryDiagnosis": "...", "icd10Code": "...", "differentialDiagnoses": ["..."], "managementPlan": "...", "patientCareAdvice": "...", "followUpWeeks": 4}'
+            },
+            {
+              role: 'user',
+              content: `Please analyze the following optometric examination findings and generate clinical recommendations:\n\n${clinicalContext}`
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: 600,
+          response_format: { type: 'json_object' }
+        })
+      });
+
+      const data = await aiResponse.json();
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        const parsed = JSON.parse(data.choices[0].message.content);
+        return res.json({
+          success: true,
+          source: 'OpenAI GPT-4o-mini (Live Cloud Intelligence)',
+          data: parsed
+        });
+      }
+    } catch (aiErr) {
+      console.warn('[OpenAI Notice - Using Clinical Knowledge Fallback]:', aiErr.message);
+    }
+  }
+
+  // 2. Intelligent Clinical Rule Fallback Engine (Runs seamlessly if offline/quota limit)
+  const iopOD = parseFloat(iopRight) || 14;
+  const iopOS = parseFloat(iopLeft) || 14;
+  const ageNum = parseInt(patientAge) || 35;
+  const ccLower = (chiefComplaint || '').toLowerCase();
+
+  let primaryDiag = 'Compound Myopic Astigmatism with Presbyopia';
+  let icdCode = 'H52.2';
+  let diffs = ['Simple Myopia (H52.1)', 'Astigmatism (H52.2)', 'Presbyopia (H52.4)'];
+  let plan = 'Prescribe corrective progressive spectacle lenses with anti-reflective coating. Annual review in 12 months.';
+  let advice = 'Maintain 20-20-20 rule during screen use. Ensure adequate reading illumination.';
+  let followUp = 12;
+
+  if (iopOD >= 22 || iopOS >= 22 || Math.abs(iopOD - iopOS) >= 4) {
+    primaryDiag = 'Ocular Hypertension / Glaucoma Suspect';
+    icdCode = 'H40.0';
+    diffs = ['Primary Open-Angle Glaucoma (H40.1)', 'Ocular Hypertension (H40.01)', 'Pigmentary Glaucoma (H40.13)'];
+    plan = 'Perform visual field analysis (Humphrey 24-2) and gonioscopy. Consider starting topical prostaglandin analogue or beta-blocker (Timolol 0.5% BD).';
+    advice = 'Strict compliance with prescribed eye drops. Avoid excessive fluid intake within short intervals.';
+    followUp = 4;
+  } else if (ccLower.includes('itch') || ccLower.includes('discharge') || ccLower.includes('red')) {
+    primaryDiag = 'Allergic Conjunctivitis (Bilateral)';
+    icdCode = 'H10.1';
+    diffs = ['Vernal Keratoconjunctivitis (H10.11)', 'Bacterial Conjunctivitis (H10.0)', 'Dry Eye Syndrome (H04.12)'];
+    plan = 'Prescribe Ketotifen Fumarate 0.025% eye drops BD for 2 weeks + Artificial Tears CMC 0.5% QDS. Cold compresses.';
+    advice = 'Avoid eye rubbing. Protect eyes from dust and smoke allergens.';
+    followUp = 2;
+  } else if (ageNum >= 40 && (ccLower.includes('near') || ccLower.includes('read') || ccLower.includes('phone'))) {
+    primaryDiag = 'Presbyopia with Astigmatism';
+    icdCode = 'H52.4';
+    diffs = ['Hyperopia (H52.0)', 'Accommodative Insufficiency (H52.5)'];
+    plan = 'Dispense near spectacle reading correction (Add +1.50 to +2.50 DS). Regular optical follow-up.';
+    advice = 'Wear reading glasses for near tasks to reduce asthenopia and frontal headaches.';
+    followUp = 12;
+  }
+
+  return res.json({
+    success: true,
+    source: 'OptiCare Clinical Knowledge Engine (Offline Mode)',
+    data: {
+      primaryDiagnosis: primaryDiag,
+      icd10Code: icdCode,
+      differentialDiagnoses: diffs,
+      managementPlan: plan,
+      patientCareAdvice: advice,
+      followUpWeeks: followUp
+    }
+  });
 });
 
 // ===== Misc =====
