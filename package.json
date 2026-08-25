@@ -3,6 +3,9 @@
   "version": "2.0.0",
   "description": "A Simplified Web-Based Eye Clinic Management System with Clinical Refraction, Live Queue, POS Billing, and SMS Alerts",
   "main": "app.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "start": "node app.js",
     "seed": "node seed-ghana.js",
