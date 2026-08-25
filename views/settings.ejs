@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Clinic Settings &amp; Branding | OptiCare</title>
+  <title>Clinic Settings &amp; Staff Management | OptiCare</title>
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%230B3D2E%22/><text x=%2250%22 y=%2265%22 font-size=%2255%22 fill=%22white%22 text-anchor=%22middle%22 font-family=%22Arial%22>O</text></svg>" />
   <style>
     .settings-grid {
       display: grid;
-      grid-template-columns: 1.15fr 1fr;
+      grid-template-columns: 1.1fr 1fr;
       gap: 24px;
       align-items: start;
+    }
+    @media (max-width: 992px) {
+      .settings-grid { grid-template-columns: 1fr; }
     }
     .logo-preview-box {
       width: 140px;
@@ -28,6 +31,49 @@
       max-height: 100%;
       object-fit: contain;
     }
+    .staff-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .staff-table th {
+      background: #F8FAFC;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 11.5px;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .staff-table td {
+      padding: 12px;
+      border-bottom: 1px solid #F1F5F9;
+      vertical-align: middle;
+    }
+    .staff-table tr:hover {
+      background: #FBFDFB;
+    }
+    .drawer-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(2px);
+      z-index: 1000;
+      display: none;
+    }
+    .drawer-content {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: 100%;
+      max-width: 440px;
+      background: #fff;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+      z-index: 1001;
+      padding: 28px;
+      display: none;
+      overflow-y: auto;
+    }
   </style>
 </head>
 <body>
@@ -38,27 +84,42 @@
     <!-- Top Header -->
     <div class="page-header" style="margin-bottom:20px;">
       <div>
-        <h1 style="margin:0 0 4px; color:#0B3D2E;">Clinic Settings &amp; Custom Letterhead</h1>
+        <h1 style="margin:0 0 4px; color:#0B3D2E;">Clinic Settings &amp; Staff Management</h1>
         <div style="font-size:13px; color:#64748B;">
-          Configure practice logo, official letterhead, consultation pricing, and staff login access.
+          Configure practice logo, official letterhead, consultation pricing, and doctor/staff logins.
         </div>
       </div>
-      <a href="/dashboard" class="btn btn-secondary">&larr; Dashboard</a>
+      <div style="display:flex; gap:10px;">
+        <button type="button" class="btn" style="background:#166534; font-weight:700;" onclick="openAddStaffDrawer()">
+          + Add New Staff Member
+        </button>
+        <a href="/dashboard" class="btn btn-secondary">&larr; Dashboard</a>
+      </div>
     </div>
 
-    <!-- Success Alert -->
+    <!-- Feedback Alerts -->
     <script>
-      if (window.location.search.includes('saved=1')) {
-        document.write('<div style="background:#F0FDF4; border:1px solid #BBF7D0; border-left:4px solid #166534; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-weight:700; color:#166534;">Settings &amp; Letterhead saved successfully.</div>');
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('saved') === '1') {
+        document.write('<div style="background:#F0FDF4; border:1px solid #BBF7D0; border-left:4px solid #166534; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-weight:700; color:#166534;">Practice Settings &amp; Letterhead saved successfully.</div>');
+      }
+      if (params.get('staff_created') === '1') {
+        document.write('<div style="background:#F0FDF4; border:1px solid #BBF7D0; border-left:4px solid #166534; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-weight:700; color:#166534;">New staff member login provisioned successfully.</div>');
+      }
+      if (params.get('staff_updated') === '1') {
+        document.write('<div style="background:#F0FDF4; border:1px solid #BBF7D0; border-left:4px solid #166534; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-weight:700; color:#166534;">Staff credentials updated successfully.</div>');
+      }
+      if (params.get('staff_deleted') === '1') {
+        document.write('<div style="background:#FEF2F2; border:1px solid #FECACA; border-left:4px solid #DC2626; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-weight:700; color:#991B1B;">Staff account revoked.</div>');
       }
     </script>
 
     <div class="settings-grid">
       
-      <!-- LEFT COLUMN: BRANDING & LETTERHEAD -->
+      <!-- LEFT COLUMN: BRANDING & LETTERHEAD & PRICING -->
       <div style="display:flex; flex-direction:column; gap:24px;">
         
-        <!-- Clinic Logo Uploader Card -->
+        <!-- 1. Clinic Logo Uploader Card -->
         <div class="card" style="border-left:4px solid #166534;">
           <h2 style="margin-top:0; color:#0B3D2E; font-size:1.15rem; margin-bottom:6px;">1. Clinic Logo (Official Letterhead)</h2>
           <div style="font-size:12.5px; color:#64748B; margin-bottom:16px;">
@@ -87,7 +148,7 @@
           </div>
         </div>
 
-        <!-- Clinic Details & Contact Letterhead Form -->
+        <!-- 2. Clinic Details & Contact Letterhead Form -->
         <div class="card">
           <h2 style="margin-top:0; color:#0B3D2E; font-size:1.15rem; margin-bottom:14px;">2. Practice Information &amp; Official Letterhead</h2>
           
@@ -129,12 +190,7 @@
           </form>
         </div>
 
-      </div>
-
-      <!-- RIGHT COLUMN: PRICING & STAFF MANAGEMENT -->
-      <div style="display:flex; flex-direction:column; gap:24px;">
-        
-        <!-- Consultation Fee Configuration -->
+        <!-- 3. Consultation Fee Configuration -->
         <div class="card" style="border-left:4px solid #B45309;">
           <h2 style="margin-top:0; color:#0B3D2E; font-size:1.15rem; margin-bottom:6px;">3. Consultation Fee Rate</h2>
           <div style="font-size:12.5px; color:#64748B; margin-bottom:14px;">
@@ -156,50 +212,75 @@
           </div>
         </div>
 
-        <!-- Staff & Doctor Logins Section in Settings -->
-        <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      </div>
+
+      <!-- RIGHT COLUMN: FULL STAFF & DOCTOR LOGINS MANAGEMENT -->
+      <div style="display:flex; flex-direction:column; gap:24px;">
+        
+        <div class="card" style="border-top:4px solid #166534;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
             <div>
-              <h2 style="margin:0; color:#0B3D2E; font-size:1.15rem;">4. Staff &amp; Doctor Logins</h2>
-              <div style="font-size:12px; color:#64748B; margin-top:2px;">Manage clinic staff accounts and consulting room assignments.</div>
+              <h2 style="margin:0; color:#0B3D2E; font-size:1.2rem;">4. Staff &amp; Doctor Logins</h2>
+              <div style="font-size:12px; color:#64748B; margin-top:2px;">
+                Provision and manage doctor credentials, assigned consulting rooms, and receptionist logins.
+              </div>
             </div>
-            <a href="/staff" class="btn btn-sm" style="background:#166534; font-weight:700;">+ Manage Staff (/staff)</a>
+            <button type="button" class="btn btn-sm" style="background:#166534; font-weight:700;" onclick="openAddStaffDrawer()">
+              + Add Member
+            </button>
           </div>
 
           <div style="overflow-x:auto;">
-            <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
+            <table class="staff-table">
               <thead>
-                <tr style="background:#F8FAFC; border-bottom:1px solid #CBD5E1;">
-                  <th style="padding:8px 10px; text-align:left; color:#475569;">Staff Member</th>
-                  <th style="padding:8px 10px; text-align:left; color:#475569;">Role</th>
-                  <th style="padding:8px 10px; text-align:left; color:#475569;">Room</th>
+                <tr>
+                  <th>Staff Member</th>
+                  <th>Role</th>
+                  <th>Room / Station</th>
+                  <th style="text-align:right;">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 <% (users || []).forEach(function(u) { %>
-                  <tr style="border-bottom:1px solid #F1F5F9;">
-                    <td style="padding:8px 10px;">
-                      <strong><%= u.name || u.email %></strong>
-                      <div style="font-size:11px; color:#64748B;"><%= u.email %></div>
+                  <tr>
+                    <td>
+                      <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:32px; height:32px; border-radius:50%; background:<%= u.role === 'doctor' ? '#166534' : (u.role === 'admin' ? '#0B3D2E' : '#2563EB') %>; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px;">
+                          <%= (u.name || u.email).charAt(0).toUpperCase() %>
+                        </div>
+                        <div>
+                          <strong><%= u.name || 'Unnamed Staff' %></strong>
+                          <% if (currentUser && currentUser.id === u.id) { %>
+                            <span style="font-size:10px; color:#166534; font-weight:700;">(You)</span>
+                          <% } %>
+                          <div style="font-size:11px; color:#64748B;"><%= u.email %></div>
+                        </div>
+                      </div>
                     </td>
-                    <td style="padding:8px 10px;">
-                      <span class="badge badge-<%= u.role === 'doctor' ? 'success' : (u.role === 'admin' ? 'warning' : 'primary') %>" style="font-size:10px; text-transform:uppercase;">
-                        <%= u.role %>
+                    <td>
+                      <span class="badge badge-<%= u.role === 'doctor' ? 'success' : (u.role === 'admin' ? 'warning' : 'primary') %>" style="font-size:10.5px; text-transform:uppercase;">
+                        <%= u.role === 'doctor' ? 'Optometrist' : (u.role === 'admin' ? 'Administrator' : 'Receptionist') %>
                       </span>
                     </td>
-                    <td style="padding:8px 10px; color:#475569; font-weight:600;">
-                      <%= u.room || 'General' %>
+                    <td>
+                      <span style="font-weight:600; color:#334155; font-size:12px;">
+                        <%= u.room || 'General Station' %>
+                      </span>
+                    </td>
+                    <td style="text-align:right; white-space:nowrap;">
+                      <button type="button" class="btn btn-sm btn-secondary" style="padding:4px 10px; font-size:11px; font-weight:600;" onclick='openEditStaffDrawer(<%= JSON.stringify(u) %>)'>
+                        Edit / Reset
+                      </button>
+                      <% if (currentUser && currentUser.id !== u.id) { %>
+                        <form action="/staff/<%= u.id %>/delete" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to revoke login access for <%= u.name || u.email %>?');">
+                          <button type="submit" class="btn btn-sm" style="background:#FEE2E2; color:#991B1B; padding:4px 8px; font-size:11px; margin-left:4px;" title="Delete Staff Account">✕</button>
+                        </form>
+                      <% } %>
                     </td>
                   </tr>
                 <% }); %>
               </tbody>
             </table>
-          </div>
-
-          <div style="margin-top:14px; text-align:right;">
-            <a href="/staff" style="font-size:12px; font-weight:700; color:#166534; text-decoration:underline;">
-              Open Full Staff Management Portal &rarr;
-            </a>
           </div>
         </div>
 
@@ -209,5 +290,145 @@
 
   </div>
 </div>
+
+<!-- DRAWER 1: ADD NEW STAFF MEMBER -->
+<div id="addStaffOverlay" class="drawer-overlay" onclick="closeAddStaffDrawer()"></div>
+<div id="addStaffDrawer" class="drawer-content">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #E2E8F0; padding-bottom:12px;">
+    <h2 style="margin:0; color:#0B3D2E; font-size:1.2rem;">Add New Staff Member</h2>
+    <button type="button" onclick="closeAddStaffDrawer()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748B;">&times;</button>
+  </div>
+
+  <form action="/staff" method="POST">
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="font-size:12px; font-weight:600;">Full Name &amp; Title</label>
+      <input type="text" name="name" placeholder="e.g. Dr. Kwame Mensah, OD" required />
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="font-size:12px; font-weight:600;">Login Email Address</label>
+      <input type="email" name="email" placeholder="e.g. dr.mensah@opticare.local" required />
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="font-size:12px; font-weight:600;">Initial Password</label>
+      <input type="password" name="password" placeholder="Create secure password" required />
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="font-size:12px; font-weight:600;">Access Role</label>
+      <select name="role" required onchange="toggleRoomSelect(this.value, 'addRoomGroup')">
+        <option value="doctor">Optometrist / Doctor</option>
+        <option value="receptionist">Receptionist / Cashier</option>
+        <option value="admin">Clinic Administrator</option>
+      </select>
+    </div>
+
+    <div id="addRoomGroup" class="form-group" style="margin-bottom:20px;">
+      <label style="font-size:12px; font-weight:600;">Assigned Consulting Room / Station</label>
+      <select name="room">
+        <option value="Consultation Room 1">Consultation Room 1</option>
+        <option value="Consultation Room 2">Consultation Room 2</option>
+        <option value="Consultation Room 3">Consultation Room 3</option>
+        <option value="Reception &amp; Cashier Desk">Reception &amp; Cashier Desk</option>
+        <option value="Administration Office">Administration Office</option>
+      </select>
+    </div>
+
+    <button type="submit" class="btn" style="width:100%; background:#166534; font-weight:700; padding:12px;">
+      Provision Staff Login
+    </button>
+  </form>
+</div>
+
+<!-- DRAWER 2: EDIT STAFF & RESET PASSWORD -->
+<div id="editStaffOverlay" class="drawer-overlay" onclick="closeEditStaffDrawer()"></div>
+<div id="editStaffDrawer" class="drawer-content">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #E2E8F0; padding-bottom:12px;">
+    <h2 style="margin:0; color:#0B3D2E; font-size:1.2rem;">Edit Staff &amp; Credentials</h2>
+    <button type="button" onclick="closeEditStaffDrawer()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748B;">&times;</button>
+  </div>
+
+  <form id="editStaffForm" method="POST">
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="font-size:12px; font-weight:600;">Full Name &amp; Title</label>
+      <input type="text" id="editName" name="name" required />
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="font-size:12px; font-weight:600;">Login Email Address</label>
+      <input type="email" id="editEmail" name="email" required />
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="font-size:12px; font-weight:600;">Access Role</label>
+      <select id="editRole" name="role" required onchange="toggleRoomSelect(this.value, 'editRoomGroup')">
+        <option value="doctor">Optometrist / Doctor</option>
+        <option value="receptionist">Receptionist / Cashier</option>
+        <option value="admin">Clinic Administrator</option>
+      </select>
+    </div>
+
+    <div id="editRoomGroup" class="form-group" style="margin-bottom:14px;">
+      <label style="font-size:12px; font-weight:600;">Assigned Consulting Room / Station</label>
+      <select id="editRoom" name="room">
+        <option value="Consultation Room 1">Consultation Room 1</option>
+        <option value="Consultation Room 2">Consultation Room 2</option>
+        <option value="Consultation Room 3">Consultation Room 3</option>
+        <option value="Reception &amp; Cashier Desk">Reception &amp; Cashier Desk</option>
+        <option value="Administration Office">Administration Office</option>
+      </select>
+    </div>
+
+    <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:14px; margin-bottom:20px;">
+      <label style="font-size:12px; font-weight:700; color:#0B3D2E; display:block; margin-bottom:4px;">Reset Password (Optional)</label>
+      <div style="font-size:11px; color:#64748B; margin-bottom:8px;">Leave blank to keep the staff member's existing password.</div>
+      <input type="password" name="new_password" placeholder="Enter new password to reset" style="font-size:12px;" />
+    </div>
+
+    <button type="submit" class="btn" style="width:100%; background:#166534; font-weight:700; padding:12px;">
+      Save Staff Changes
+    </button>
+  </form>
+</div>
+
+<script>
+  function openAddStaffDrawer() {
+    document.getElementById('addStaffOverlay').style.display = 'block';
+    document.getElementById('addStaffDrawer').style.display = 'block';
+  }
+  function closeAddStaffDrawer() {
+    document.getElementById('addStaffOverlay').style.display = 'none';
+    document.getElementById('addStaffDrawer').style.display = 'none';
+  }
+
+  function openEditStaffDrawer(user) {
+    document.getElementById('editStaffForm').action = '/staff/' + user.id + '/update?from_settings=1';
+    document.getElementById('editName').value = user.name || '';
+    document.getElementById('editEmail').value = user.email || '';
+    document.getElementById('editRole').value = user.role || 'doctor';
+    document.getElementById('editRoom').value = user.room || 'Consultation Room 1';
+
+    document.getElementById('editStaffOverlay').style.display = 'block';
+    document.getElementById('editStaffDrawer').style.display = 'block';
+  }
+  function closeEditStaffDrawer() {
+    document.getElementById('editStaffOverlay').style.display = 'none';
+    document.getElementById('editStaffDrawer').style.display = 'none';
+  }
+
+  function toggleRoomSelect(role, groupId) {
+    const el = document.getElementById(groupId);
+    if (!el) return;
+    const select = el.querySelector('select');
+    if (role === 'doctor') {
+      if (select) select.value = 'Consultation Room 1';
+    } else if (role === 'receptionist') {
+      if (select) select.value = 'Reception & Cashier Desk';
+    } else if (role === 'admin') {
+      if (select) select.value = 'Administration Office';
+    }
+  }
+</script>
 </body>
 </html>

@@ -30,9 +30,11 @@ app.use((req, res, next) => {
   }
 
   // Load Clinic Settings & Letterhead globally for all templates
-  const settingsRows = db.prepare('SELECT key, value FROM settings').all();
-  const settingsObj = {};
-  settingsRows.forEach(r => { settingsObj[r.key] = r.value; });
+  let settingsObj = {};
+  try {
+    const settingsRows = db.prepare('SELECT key, value FROM settings').all();
+    settingsRows.forEach(r => { settingsObj[r.key] = r.value; });
+  } catch (err) {}
   res.locals.clinicSettings = settingsObj;
 
   next();
@@ -1415,14 +1417,16 @@ app.get('/staff', requireLogin, requireRole('admin'), (req, res) => {
 
 app.post('/staff', requireLogin, requireRole('admin'), (req, res) => {
   const { name, email, role, room, password } = req.body;
+  const referer = req.headers.referer || '/staff';
+  const targetPage = referer.includes('/settings') ? '/settings' : '/staff';
   
   if (!email || !password || !role) {
-    return res.redirect('/staff?error=missing_fields');
+    return res.redirect(targetPage + '?error=missing_fields');
   }
 
   const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim().toLowerCase());
   if (existing) {
-    return res.redirect('/staff?error=duplicate_email');
+    return res.redirect(targetPage + '?error=duplicate_email');
   }
 
   const hashedPassword = bcrypt.hashSync(password, 10);
@@ -1431,12 +1435,14 @@ app.post('/staff', requireLogin, requireRole('admin'), (req, res) => {
     VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
   `).run(name ? name.trim() : null, email.trim().toLowerCase(), hashedPassword, role, room || 'Consultation Room 1');
 
-  res.redirect('/staff?created=1');
+  res.redirect(targetPage + (targetPage === '/settings' ? '?staff_created=1' : '?created=1'));
 });
 
 app.post('/staff/:id/update', requireLogin, requireRole('admin'), (req, res) => {
   const staffId = req.params.id;
   const { name, email, role, room, new_password } = req.body;
+  const referer = req.headers.referer || '/staff';
+  const targetPage = referer.includes('/settings') ? '/settings' : '/staff';
 
   if (new_password && new_password.trim().length > 0) {
     const hashedPassword = bcrypt.hashSync(new_password.trim(), 10);
@@ -1453,19 +1459,21 @@ app.post('/staff/:id/update', requireLogin, requireRole('admin'), (req, res) => 
     `).run(name ? name.trim() : null, email.trim().toLowerCase(), role, room, staffId);
   }
 
-  res.redirect('/staff?updated=1');
+  res.redirect(targetPage + (targetPage === '/settings' ? '?staff_updated=1' : '?updated=1'));
 });
 
 app.post('/staff/:id/delete', requireLogin, requireRole('admin'), (req, res) => {
   const staffId = req.params.id;
+  const referer = req.headers.referer || '/staff';
+  const targetPage = referer.includes('/settings') ? '/settings' : '/staff';
   
   // Prevent admin from deleting own account
   if (res.locals.currentUser && res.locals.currentUser.id === parseInt(staffId)) {
-    return res.redirect('/staff?error=cannot_delete_self');
+    return res.redirect(targetPage + '?error=cannot_delete_self');
   }
 
   db.prepare('DELETE FROM users WHERE id = ?').run(staffId);
-  res.redirect('/staff?deleted=1');
+  res.redirect(targetPage + (targetPage === '/settings' ? '?staff_deleted=1' : '?deleted=1'));
 });
 
 // ===== Clinic Settings & Custom Letterhead (Admin Only) =====

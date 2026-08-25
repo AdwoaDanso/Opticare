@@ -105,6 +105,13 @@ db.exec(`
   )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )
+`);
+
 // ---- Patches for columns added after the tables above were first created ----
 // (CREATE TABLE IF NOT EXISTS only runs on a brand-new table, so any column
 // added later needs an explicit ALTER TABLE like these instead.)
