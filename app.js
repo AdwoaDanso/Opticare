@@ -39,7 +39,8 @@ app.use((req, res, next) => {
 });
 
 function requireLogin(req, res, next) {
-  if (!req.session.userId) {
+  if (!req.session.userId || !res.locals.currentUser) {
+    req.session.userId = null;
     return res.redirect('/login');
   }
   next();
