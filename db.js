@@ -112,7 +112,7 @@ db.exec(`
 try {
   db.exec('ALTER TABLE invoices ADD COLUMN payment_method TEXT');
 } catch (err) {
-  // Column already exists — safe to ignore
+  // Column already exists - safe to ignore
 }
 
 try {
@@ -230,7 +230,7 @@ try { db.exec('ALTER TABLE examinations ADD COLUMN biomicroscopy TEXT'); } catch
 // Expiry date on stock items
 try { db.exec('ALTER TABLE stock_items ADD COLUMN expiry_date TEXT'); } catch (err) {}
 
-// Referrals table — saved referral letters per patient
+// Referrals table - saved referral letters per patient
 db.exec(`
   CREATE TABLE IF NOT EXISTS referrals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -246,7 +246,7 @@ db.exec(`
   )
 `);
 
-// Settings table — clinic-wide settings (admin only)
+// Settings table - clinic-wide settings (admin only)
 db.exec(`
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,

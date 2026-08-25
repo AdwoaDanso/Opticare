@@ -60,7 +60,7 @@
 
               if (latestExam.eye_pressure_right || latestExam.eye_pressure_left) {
                 prefilledFindings += 'INTRAOCULAR PRESSURE (IOP):\n';
-                prefilledFindings += '  - OD: ' + (latestExam.eye_pressure_right || '—') + ' mmHg | OS: ' + (latestExam.eye_pressure_left || '—') + ' mmHg (' + (latestExam.iop_method || 'NCT') + ')\n';
+                prefilledFindings += '  - OD: ' + (latestExam.eye_pressure_right || '-') + ' mmHg | OS: ' + (latestExam.eye_pressure_left || '-') + ' mmHg (' + (latestExam.iop_method || 'NCT') + ')\n';
               }
 
               if (latestExam.anterior_segment) prefilledFindings += 'ANTERIOR SEGMENT: ' + latestExam.anterior_segment + '\n';

@@ -143,7 +143,7 @@
           <div class="form-group">
             <label style="font-size:12px; font-weight:600;">Select Patient</label>
             <select name="patient_id" required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); font-size:13px; font-weight:600;">
-              <option value="">— Select Patient Profile —</option>
+              <option value="">- Select Patient Profile -</option>
               <% (patientsList || []).forEach(function(p) { %>
                 <option value="<%= p.id %>">
                   <%= p.full_name %> (ID #<%= p.id %> | <%= p.phone || 'No phone' %>)

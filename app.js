@@ -41,7 +41,7 @@ function requireLogin(req, res, next) {
 function requireRole(...allowedRoles) {
   return function (req, res, next) {
     if (!res.locals.currentUser || !allowedRoles.includes(res.locals.currentUser.role)) {
-      return res.status(403).send('Access denied — your role doesn\'t have permission for this. <a href="/dashboard">Back to Dashboard</a>');
+      return res.status(403).send('Access denied - your role doesn\'t have permission for this. <a href="/dashboard">Back to Dashboard</a>');
     }
     next();
   };
@@ -558,7 +558,7 @@ app.post('/patients/:id/exams', requireLogin, requireRole('admin', 'doctor'), (r
   const visualField = req.body.visual_field || null;
   const ocularMotility = req.body.ocular_motility || null;
 
-  // Biomicroscopy & Ophthalmoscopy — structured grid stored as JSON
+  // Biomicroscopy & Ophthalmoscopy - structured grid stored as JSON
   const bioStructures = ['lids_lashes', 'conjunctiva', 'cornea', 'anterior_chamber', 'iris_pupil', 'lens', 'vitreous', 'optic_disc', 'macula', 'retinal_periphery', 'vessels'];
   const biomicroscopyData = {};
   bioStructures.forEach(function(s) {
@@ -638,7 +638,7 @@ app.post('/patients/:id/exams', requireLogin, requireRole('admin', 'doctor'), (r
     if (!id) return;
     const item = db.prepare('SELECT * FROM stock_items WHERE id = ?').get(id);
     if (item && item.quantity > 0) {
-      // In stock — add to bill and decrement stock
+      // In stock - add to bill and decrement stock
       db.prepare(`
         INSERT INTO invoices (patient_id, category, description, unit_price, quantity, discount, amount, stock_item_id, quantity_sold)
         VALUES (?, 'Medications & Eye Drops', ?, ?, 1, 0, ?, ?, 1)
@@ -675,7 +675,7 @@ app.get('/exams/:id/prescription', requireLogin, requireRole('admin', 'doctor'),
   prescribedDrugs.forEach(function(id) {
     const item = db.prepare('SELECT * FROM stock_items WHERE id = ?').get(parseInt(id));
     if (!item || item.quantity === 0) {
-      // Not in stock — should appear on external Rx
+      // Not in stock - should appear on external Rx
       externalDrugs.push(item ? item.name : 'Drug #' + id);
     }
   });

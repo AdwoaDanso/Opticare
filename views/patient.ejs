@@ -483,25 +483,25 @@
             <div class="form-group">
               <label style="font-size:11px; font-weight:600;">Select Standard Ophthalmic ICD-10 Code:</label>
               <select id="icd10Selector" onchange="applyIcd10(this)" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border);">
-                <option value="">— Select ICD-10 Diagnostic Code —</option>
-                <option value="H52.13" data-desc="Myopia, Bilateral">H52.13 — Myopia, Bilateral</option>
-                <option value="H52.11" data-desc="Myopia, Right Eye">H52.11 — Myopia, Right Eye</option>
-                <option value="H52.12" data-desc="Myopia, Left Eye">H52.12 — Myopia, Left Eye</option>
-                <option value="H52.03" data-desc="Hypermetropia, Bilateral">H52.03 — Hypermetropia, Bilateral</option>
-                <option value="H52.223" data-desc="Regular Astigmatism, Bilateral">H52.223 — Regular Astigmatism, Bilateral</option>
-                <option value="H52.4" data-desc="Presbyopia">H52.4 — Presbyopia</option>
-                <option value="H53.149" data-desc="Asthenopia / Eye Strain (Visual Fatigue)">H53.149 — Asthenopia / Eye Strain</option>
-                <option value="H10.9" data-desc="Unspecified Conjunctivitis (Allergic / Bacterial)">H10.9 — Unspecified Conjunctivitis</option>
-                <option value="H04.123" data-desc="Dry Eye Syndrome, Bilateral">H04.123 — Dry Eye Syndrome, Bilateral</option>
-                <option value="H25.9" data-desc="Age-Related Cataract, Unspecified">H25.9 — Age-Related Cataract, Unspecified</option>
-                <option value="H40.113" data-desc="Primary Open-Angle Glaucoma, Bilateral">H40.113 — Primary Open-Angle Glaucoma</option>
-                <option value="H35.30" data-desc="Unspecified Macular Degeneration">H35.30 — Unspecified Macular Degeneration</option>
-                <option value="E11.319" data-desc="Type 2 Diabetes with Nonproliferative Diabetic Retinopathy">E11.319 — Diabetic Retinopathy</option>
-                <option value="H00.0" data-desc="Hordeolum (Stye)">H00.0 — Hordeolum (Stye)</option>
-                <option value="H00.1" data-desc="Chalazion">H00.1 — Chalazion</option>
-                <option value="H11.0" data-desc="Pterygium">H11.0 — Pterygium</option>
-                <option value="H11.1" data-desc="Pinguecula">H11.1 — Pinguecula</option>
-                <option value="Z01.00" data-desc="Routine Examination of Eyes and Vision (Normal)">Z01.00 — Routine Examination of Eyes (Normal)</option>
+                <option value="">- Select ICD-10 Diagnostic Code -</option>
+                <option value="H52.13" data-desc="Myopia, Bilateral">H52.13 - Myopia, Bilateral</option>
+                <option value="H52.11" data-desc="Myopia, Right Eye">H52.11 - Myopia, Right Eye</option>
+                <option value="H52.12" data-desc="Myopia, Left Eye">H52.12 - Myopia, Left Eye</option>
+                <option value="H52.03" data-desc="Hypermetropia, Bilateral">H52.03 - Hypermetropia, Bilateral</option>
+                <option value="H52.223" data-desc="Regular Astigmatism, Bilateral">H52.223 - Regular Astigmatism, Bilateral</option>
+                <option value="H52.4" data-desc="Presbyopia">H52.4 - Presbyopia</option>
+                <option value="H53.149" data-desc="Asthenopia / Eye Strain (Visual Fatigue)">H53.149 - Asthenopia / Eye Strain</option>
+                <option value="H10.9" data-desc="Unspecified Conjunctivitis (Allergic / Bacterial)">H10.9 - Unspecified Conjunctivitis</option>
+                <option value="H04.123" data-desc="Dry Eye Syndrome, Bilateral">H04.123 - Dry Eye Syndrome, Bilateral</option>
+                <option value="H25.9" data-desc="Age-Related Cataract, Unspecified">H25.9 - Age-Related Cataract, Unspecified</option>
+                <option value="H40.113" data-desc="Primary Open-Angle Glaucoma, Bilateral">H40.113 - Primary Open-Angle Glaucoma</option>
+                <option value="H35.30" data-desc="Unspecified Macular Degeneration">H35.30 - Unspecified Macular Degeneration</option>
+                <option value="E11.319" data-desc="Type 2 Diabetes with Nonproliferative Diabetic Retinopathy">E11.319 - Diabetic Retinopathy</option>
+                <option value="H00.0" data-desc="Hordeolum (Stye)">H00.0 - Hordeolum (Stye)</option>
+                <option value="H00.1" data-desc="Chalazion">H00.1 - Chalazion</option>
+                <option value="H11.0" data-desc="Pterygium">H11.0 - Pterygium</option>
+                <option value="H11.1" data-desc="Pinguecula">H11.1 - Pinguecula</option>
+                <option value="Z01.00" data-desc="Routine Examination of Eyes and Vision (Normal)">Z01.00 - Routine Examination of Eyes (Normal)</option>
               </select>
             </div>
             <div class="grid-2">
@@ -592,7 +592,7 @@
             <div id="prescribedDrugsContainer">
               <div class="drug-row">
                 <select name="prescribed_drugs[]" style="flex:2; padding:8px 10px; border-radius:8px; border:1px solid var(--border); font-size:13px;">
-                  <option value="">— Select Medication / Eye Drops —</option>
+                  <option value="">- Select Medication / Eye Drops -</option>
                   <% 
                     const drugItems = stockItems.filter(i => (i.category === 'drug' || i.category === 'Drug' || i.category === 'Medications & Eye Drops'));
                   %>
@@ -926,7 +926,7 @@
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #E2E8F0; padding-bottom:10px;">
             <div>
               <h3 style="margin:0; color:#0B3D2E; font-size:1.15rem;">Current Visit Ledger (<%= invoices.length %> items)</h3>
-              <span style="font-size:12px; color:#64748B;">Patient: <%= patient.full_name %> &mdash; ID #<%= patient.id %></span>
+              <span style="font-size:12px; color:#64748B;">Patient: <%= patient.full_name %> - ID #<%= patient.id %></span>
             </div>
             <% if (totalUnpaid > 0) { %>
               <span class="badge badge-danger" style="font-size:11px; font-weight:700;">UNPAID BALANCE</span>
@@ -1318,7 +1318,7 @@
             <div class="form-group">
               <label style="font-size:12px; font-weight:600;">Gender</label>
               <select name="gender" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border);">
-                <option value="">— Select —</option>
+                <option value="">- Select -</option>
                 <option value="Male" <%= patient.gender === 'Male' ? 'selected' : '' %>>Male</option>
                 <option value="Female" <%= patient.gender === 'Female' ? 'selected' : '' %>>Female</option>
                 <option value="Other" <%= patient.gender === 'Other' ? 'selected' : '' %>>Other</option>

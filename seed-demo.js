@@ -47,10 +47,10 @@ const examInsert = db.prepare(`
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
-examInsert.run(patientIds['Ama Serwaa'], '6/6', '6/6', '14', '15', 'Normal', 'Full', 'Routine check — normal', thisMonth + ' 09:00:00');
+examInsert.run(patientIds['Ama Serwaa'], '6/6', '6/6', '14', '15', 'Normal', 'Full', 'Routine check - normal', thisMonth + ' 09:00:00');
 
 examInsert.run(patientIds['Vera Danso'], '6/6', '6/6', '15', '15', 'Normal', 'Full', 'Baseline exam', '2025-08-01 09:00:00');
-examInsert.run(patientIds['Vera Danso'], '6/18', '6/9', '18', '17', 'Normal', 'Mild constriction', 'Follow-up — vision declined', thisMonth + ' 10:00:00');
+examInsert.run(patientIds['Vera Danso'], '6/18', '6/9', '18', '17', 'Normal', 'Mild constriction', 'Follow-up - vision declined', thisMonth + ' 10:00:00');
 
 examInsert.run(patientIds['Kwabena Osei'], '6/6', '6/9', '13', '14', 'Normal', 'Full', 'Astigmatism, mild', '2025-06-10 09:00:00');
 

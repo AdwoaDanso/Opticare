@@ -1,4 +1,4 @@
-# OptiCare V2 &mdash; Eye Clinic Management System
+# OptiCare V2 - Eye Clinic Management System
 
 > **A Simplified, Web-Based Clinical Practice & Eyecare Management System**  
 > Tailored for Optometrists, Eye Clinics, and Diagnostic Vision Centers.
