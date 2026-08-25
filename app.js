@@ -267,6 +267,16 @@ app.get('/', requireLogin, (req, res) => {
   });
 });
 
+// Direct Download Endpoint for Mini Project Documentation PDF
+app.get('/download-documentation', (req, res) => {
+  const pdfPath = path.join(__dirname, 'mini_project_documentation.pdf');
+  if (fs.existsSync(pdfPath)) {
+    res.download(pdfPath, 'OptiCare_V2_Mini_Project_Documentation.pdf');
+  } else {
+    res.status(404).send('Documentation PDF not found.');
+  }
+});
+
 app.post('/patients', requireLogin, (req, res) => {
   const fullName = req.body.full_name;
   const phone = req.body.phone;
