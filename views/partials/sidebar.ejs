@@ -1,7 +1,11 @@
 <div class="sidebar">
   <div class="brand" style="display:flex; align-items:center; gap:10px;">
-    <svg class="svg-icon lg" viewBox="0 0 24 24" style="stroke:#22A366;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-    OptiCare
+    <% if (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_logo) { %>
+      <img src="/uploads/<%= clinicSettings.clinic_logo %>" alt="Logo" style="max-height:28px; max-width:40px; object-fit:contain; border-radius:4px;" />
+    <% } else { %>
+      <svg class="svg-icon lg" viewBox="0 0 24 24" style="stroke:#22A366;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+    <% } %>
+    <%= (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_name) ? clinicSettings.clinic_name.split(' ')[0] : 'OptiCare' %>
   </div>
   <nav>
     <a href="/dashboard" class="<%= currentPath.startsWith('/dashboard') ? 'active' : '' %>">

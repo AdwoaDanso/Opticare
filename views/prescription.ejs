@@ -40,14 +40,22 @@
     </div>
 
     <div class="rx-header">
-      <div>
-        <h2 style="margin:0; color:#0B3D2E;">OptiCare Eye Clinic</h2>
-        <div style="font-size:12px; color:#64748B;">Optical & Medical Eyecare Prescription</div>
-        <div style="font-size:12px; color:#64748B;">Tel: +233 (0) 55 000 1234 · info@opticare.local</div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <% if (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_logo) { %>
+          <img src="/uploads/<%= clinicSettings.clinic_logo %>" alt="Clinic Logo" style="max-height:55px; max-width:120px; object-fit:contain;" />
+        <% } %>
+        <div>
+          <h2 style="margin:0; color:#0B3D2E;"><%= (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_name) ? clinicSettings.clinic_name : 'OptiCare Eye Clinic' %></h2>
+          <div style="font-size:12px; color:#64748B;"><%= (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_tagline) ? clinicSettings.clinic_tagline : 'Optical & Medical Eyecare Prescription' %></div>
+          <div style="font-size:12px; color:#64748B;">Tel: <%= (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_phone) ? clinicSettings.clinic_phone : '+233 (0) 55 000 1234' %> · <%= (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_email) ? clinicSettings.clinic_email : 'info@opticare.local' %></div>
+        </div>
       </div>
       <div style="text-align:right;">
         <span class="rx-symbol">℞</span>
         <div style="font-size:12px; color:#64748B; margin-top:4px;">Date: <%= exam.exam_date %></div>
+        <% if (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_reg_number) { %>
+          <div style="font-size:11px; color:#94A3B8;">Lic: <%= clinicSettings.clinic_reg_number %></div>
+        <% } %>
       </div>
     </div>
 

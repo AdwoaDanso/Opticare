@@ -83,14 +83,27 @@
   <table class="header-table">
     <tr>
       <td>
-        <div class="brand-title">OptiCare Eye Clinic</div>
-        <div class="brand-subtitle">Department of Optometry & Ophthalmology · Diagnostic Eyecare Services</div>
-        <div class="brand-subtitle">Tel: +233 (0) 55 000 1234 · Email: referrals@opticare.local</div>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <% if (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_logo) { %>
+            <img src="/uploads/<%= clinicSettings.clinic_logo %>" alt="Clinic Logo" style="max-height:65px; max-width:130px; object-fit:contain;" />
+          <% } %>
+          <div>
+            <div class="brand-title"><%= (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_name) ? clinicSettings.clinic_name : 'OptiCare Eye Clinic' %></div>
+            <div class="brand-subtitle"><%= (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_tagline) ? clinicSettings.clinic_tagline : 'Department of Optometry & Ophthalmology · Diagnostic Eyecare Services' %></div>
+            <div class="brand-subtitle">Tel: <%= (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_phone) ? clinicSettings.clinic_phone : '+233 (0) 55 000 1234' %> · Email: <%= (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_email) ? clinicSettings.clinic_email : 'referrals@opticare.local' %></div>
+            <% if (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_address) { %>
+              <div class="brand-subtitle" style="font-size:11px; color:#94A3B8;"><%= clinicSettings.clinic_address %></div>
+            <% } %>
+          </div>
+        </div>
       </td>
       <td style="text-align: right; vertical-align: top;">
         <h3 style="margin:0; color:#145C43;">MEDICAL REFERRAL LETTER</h3>
         <div style="margin-top:4px;"><strong>Date:</strong> <%= new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %></div>
         <div style="margin-top:4px;"><strong>Priority:</strong> <span style="font-weight:bold; color: <%= urgency === 'Emergency' ? '#B91C1C' : (urgency === 'Urgent' ? '#B45309' : '#15803D') %>;"><%= urgency.toUpperCase() %></span></div>
+        <% if (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_reg_number) { %>
+          <div style="font-size:11px; color:#64748B; margin-top:2px;">Lic: <%= clinicSettings.clinic_reg_number %></div>
+        <% } %>
       </td>
     </tr>
   </table>

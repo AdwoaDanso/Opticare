@@ -106,14 +106,23 @@
     
     <!-- Printable Header (Visible only on print) -->
     <div class="report-print-header">
-      <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-        <div>
-          <h1 style="margin:0; color:#0B3D2E; font-size:22px;">OptiCare Eye Clinic | Practice Performance Report</h1>
-          <div style="font-size:12px; color:#64748B;">Comprehensive Clinical Activity &amp; Financial Summary</div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:16px;">
+          <% if (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_logo) { %>
+            <img src="/uploads/<%= clinicSettings.clinic_logo %>" alt="Clinic Logo" style="max-height:55px; max-width:120px; object-fit:contain;" />
+          <% } %>
+          <div>
+            <h1 style="margin:0; color:#0B3D2E; font-size:20px;"><%= (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_name) ? clinicSettings.clinic_name : 'OptiCare Eye Clinic' %></h1>
+            <div style="font-size:12px; color:#64748B;"><%= (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_tagline) ? clinicSettings.clinic_tagline : 'Practice Performance & Financial Summary' %></div>
+            <div style="font-size:11px; color:#94A3B8;">Tel: <%= (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_phone) ? clinicSettings.clinic_phone : '+233 (0) 55 000 1234' %> · <%= (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_email) ? clinicSettings.clinic_email : 'info@opticare.local' %></div>
+          </div>
         </div>
         <div style="text-align:right; font-size:12px; color:#475569;">
           <div><strong>Period:</strong> <%= new Date(month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) %></div>
           <div><strong>Printed:</strong> <%= new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) %></div>
+          <% if (typeof clinicSettings !== 'undefined' && clinicSettings.clinic_reg_number) { %>
+            <div style="font-size:11px; color:#64748B;">Lic: <%= clinicSettings.clinic_reg_number %></div>
+          <% } %>
         </div>
       </div>
     </div>

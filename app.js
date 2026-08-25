@@ -12,6 +12,7 @@ app.set('view engine', 'ejs');
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
+app.use('/uploads', express.static('uploads'));
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'opticare-secret-key-2026',
@@ -27,6 +28,12 @@ app.use((req, res, next) => {
   } else {
     res.locals.currentUser = null;
   }
+
+  // Load Clinic Settings & Letterhead globally for all templates
+  const settingsRows = db.prepare('SELECT key, value FROM settings').all();
+  const settingsObj = {};
+  settingsRows.forEach(r => { settingsObj[r.key] = r.value; });
+  res.locals.clinicSettings = settingsObj;
 
   next();
 });
@@ -1458,6 +1465,52 @@ app.post('/staff/:id/delete', requireLogin, requireRole('admin'), (req, res) => 
 
   db.prepare('DELETE FROM users WHERE id = ?').run(staffId);
   res.redirect('/staff?deleted=1');
+});
+
+// ===== Clinic Settings & Custom Letterhead (Admin Only) =====
+
+app.get('/settings', requireLogin, requireRole('admin'), (req, res) => {
+  const feeRow = db.prepare("SELECT value FROM settings WHERE key = 'consultation_fee'").get();
+  const consultationFee = feeRow ? feeRow.value : '150.00';
+  const users = db.prepare('SELECT id, email, name, role, room, created_at FROM users ORDER BY role, name').all();
+
+  res.render('settings', {
+    consultationFee: consultationFee,
+    users: users
+  });
+});
+
+app.post('/settings', requireLogin, requireRole('admin'), (req, res) => {
+  const {
+    consultation_fee,
+    clinic_name,
+    clinic_tagline,
+    clinic_phone,
+    clinic_email,
+    clinic_address,
+    clinic_reg_number
+  } = req.body;
+
+  const setStmt = db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value");
+
+  if (consultation_fee) setStmt.run('consultation_fee', parseFloat(consultation_fee).toFixed(2));
+  if (clinic_name) setStmt.run('clinic_name', clinic_name.trim());
+  if (clinic_tagline) setStmt.run('clinic_tagline', clinic_tagline.trim());
+  if (clinic_phone) setStmt.run('clinic_phone', clinic_phone.trim());
+  if (clinic_email) setStmt.run('clinic_email', clinic_email.trim());
+  if (clinic_address) setStmt.run('clinic_address', clinic_address.trim());
+  if (clinic_reg_number) setStmt.run('clinic_reg_number', clinic_reg_number.trim());
+
+  res.redirect('/settings?saved=1');
+});
+
+// Upload Clinic Logo for Letterheads, Bills & Reports
+app.post('/settings/logo', requireLogin, requireRole('admin'), upload.single('logo'), (req, res) => {
+  if (req.file && req.file.filename) {
+    db.prepare("INSERT INTO settings (key, value) VALUES ('clinic_logo', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+      .run(req.file.filename);
+  }
+  res.redirect('/settings?saved=1');
 });
 
 // ===== Files (scans/images) =====
