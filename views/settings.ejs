@@ -212,6 +212,33 @@
           </div>
         </div>
 
+        <!-- 4. Paystack Mobile Money & Card Gateway Configuration -->
+        <div class="card" style="border-left:4px solid #00C3F7;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h2 style="margin:0; color:#0B3D2E; font-size:1.15rem;">4. Paystack Gateway (MTN MoMo, Telecel, Card)</h2>
+            <span class="badge badge-success" style="background:#E0F2FE; color:#0284C7; font-weight:700;">Live Gateway</span>
+          </div>
+          <div style="font-size:12.5px; color:#64748B; margin-bottom:14px;">
+            Enables instant mobile money USSD prompts and card payments at the cashier desk with automatic verification.
+          </div>
+
+          <form action="/settings" method="POST">
+            <div class="form-group" style="margin-bottom:12px;">
+              <label style="font-size:12px; font-weight:600;">Paystack Secret Key (sk_live_... / sk_test_...)</label>
+              <input type="password" name="paystack_secret_key" value="<%= (typeof clinicSettings !== 'undefined' && clinicSettings.paystack_secret_key) ? clinicSettings.paystack_secret_key : '' %>" placeholder="sk_live_..." style="font-family:monospace; font-size:12px;" />
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+              <label style="font-size:12px; font-weight:600;">Paystack Public Key (Optional pk_...)</label>
+              <input type="text" name="paystack_public_key" value="<%= (typeof clinicSettings !== 'undefined' && clinicSettings.paystack_public_key) ? clinicSettings.paystack_public_key : '' %>" placeholder="pk_live_..." style="font-family:monospace; font-size:12px;" />
+            </div>
+
+            <button type="submit" class="btn btn-sm" style="background:#0284C7; color:#fff; font-weight:700; padding:8px 18px;">
+              Save Paystack Keys
+            </button>
+          </form>
+        </div>
+
       </div>
 
       <!-- RIGHT COLUMN: FULL STAFF & DOCTOR LOGINS MANAGEMENT -->

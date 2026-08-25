@@ -763,7 +763,140 @@ app.post('/patients/:id/invoices/pay-all', requireLogin, requireRole('admin', 'r
   res.redirect('/patients/' + patientId + '/bill-print?paid=1');
 });
 
-// Mobile Money (MoMo) Live Payment Prompt & Settlement
+// Helper functions to get Paystack keys
+function getPaystackSecretKey() {
+  try {
+    const dbRow = db.prepare("SELECT value FROM settings WHERE key = 'paystack_secret_key'").get();
+    return process.env.PAYSTACK_SECRET_KEY || (dbRow ? dbRow.value : '');
+  } catch (e) {
+    return process.env.PAYSTACK_SECRET_KEY || '';
+  }
+}
+
+function getPaystackPublicKey() {
+  try {
+    const dbRow = db.prepare("SELECT value FROM settings WHERE key = 'paystack_public_key'").get();
+    return process.env.PAYSTACK_PUBLIC_KEY || (dbRow ? dbRow.value : '');
+  } catch (e) {
+    return process.env.PAYSTACK_PUBLIC_KEY || '';
+  }
+}
+
+// Paystack Hosted Checkout Initialization (MTN MoMo, Telecel Cash, AT Money, Card)
+app.post('/patients/:id/paystack/initialize', requireLogin, requireRole('admin', 'receptionist'), async (req, res) => {
+  const patientId = req.params.id;
+  const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(patientId);
+  if (!patient) return res.status(404).send('Patient not found');
+
+  const unpaidInvoices = db.prepare("SELECT * FROM invoices WHERE patient_id = ? AND status = 'unpaid'").all(patientId);
+  const totalAmount = unpaidInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+
+  if (totalAmount <= 0) {
+    return res.redirect('/patients/' + patientId + '?tab=billing');
+  }
+
+  const secretKey = getPaystackSecretKey();
+  if (!secretKey) {
+    return res.redirect('/patients/' + patientId + '?error=missing_paystack_key');
+  }
+
+  const email = (patient.email && patient.email.includes('@')) ? patient.email : `patient_${patientId}@opticare.local`;
+  const reference = `OPTICARE_PAY_${patientId}_${Date.now()}`;
+  const amountInPesewas = Math.round(totalAmount * 100);
+
+  try {
+    const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${secretKey.trim()}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: email,
+        amount: amountInPesewas,
+        currency: 'GHS',
+        reference: reference,
+        callback_url: `${req.protocol}://${req.get('host')}/paystack/callback`,
+        metadata: {
+          patient_id: patientId,
+          patient_name: patient.full_name,
+          patient_phone: patient.phone,
+          unpaid_invoice_ids: unpaidInvoices.map(i => i.id)
+        },
+        channels: ['mobile_money', 'card']
+      })
+    });
+
+    const data = await paystackRes.json();
+    if (data.status && data.data && data.data.authorization_url) {
+      return res.redirect(data.data.authorization_url);
+    } else {
+      console.error('[Paystack Init Error]:', data);
+      return res.redirect('/patients/' + patientId + '?error=' + encodeURIComponent(data.message || 'paystack_init_failed'));
+    }
+  } catch (err) {
+    console.error('[Paystack Init Exception]:', err.message);
+    return res.redirect('/patients/' + patientId + '?error=paystack_network_error');
+  }
+});
+
+// Paystack Return & Verification Callback
+app.get('/paystack/callback', requireLogin, async (req, res) => {
+  const reference = req.query.reference || req.query.trxref;
+  if (!reference) {
+    return res.redirect('/?error=missing_reference');
+  }
+
+  const secretKey = getPaystackSecretKey();
+  if (!secretKey) {
+    return res.redirect('/?error=missing_paystack_key');
+  }
+
+  try {
+    const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${secretKey.trim()}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await verifyRes.json();
+    if (data.status && data.data && data.data.status === 'success') {
+      const metadata = data.data.metadata || {};
+      const patientId = metadata.patient_id;
+      const patient = patientId ? db.prepare('SELECT * FROM patients WHERE id = ?').get(patientId) : null;
+      const amountPaid = (data.data.amount / 100).toFixed(2);
+      const channel = data.data.channel || 'mobile_money';
+      const paymentMethod = `Paystack ${channel.toUpperCase()}`;
+
+      if (patientId) {
+        db.prepare(`
+          UPDATE invoices
+          SET status = 'paid', payment_method = ?
+          WHERE patient_id = ? AND status = 'unpaid'
+        `).run(paymentMethod, patientId);
+
+        db.prepare("UPDATE queue_entries SET status = 'completed' WHERE patient_id = ? AND status IN ('ready_for_billing', 'in_progress', 'waiting')").run(patientId);
+
+        const phone = patient ? patient.phone : metadata.patient_phone;
+        if (phone) {
+          const firstName = patient ? (patient.full_name.split(' ')[0] || patient.full_name) : 'Valued Patient';
+          const msg = `OptiCare Receipt: Payment of GHS ${amountPaid} received via Mobile Money (${channel.toUpperCase()}) for Patient #${patientId}. Ref: ${reference}. Thank you.`;
+          dispatchSMS(patientId, phone, msg);
+        }
+
+        return res.redirect(`/patients/${patientId}/bill-print?paid=1&momo=1&ref=${encodeURIComponent(reference)}`);
+      }
+    }
+    return res.redirect('/?error=payment_unverified');
+  } catch (err) {
+    console.error('[Paystack Callback Error]:', err.message);
+    return res.redirect('/?error=verification_failed');
+  }
+});
+
+// Mobile Money (MoMo) Live USSD Prompt & Instant Settlement
 app.post('/patients/:id/invoices/pay-momo', requireLogin, requireRole('admin', 'receptionist'), async (req, res) => {
   const patientId = req.params.id;
   const momoPhone = req.body.momo_phone || '';
@@ -779,24 +912,24 @@ app.post('/patients/:id/invoices/pay-momo', requireLogin, requireRole('admin', '
   }
 
   let transactionReference = 'MOMO-GH-' + Date.now().toString().slice(-6);
-  let livePromptTriggered = false;
+  const secretKey = getPaystackSecretKey();
 
-  // Format phone number (e.g. 0244123456)
+  // Format phone number (e.g. 0244123456 -> 233244123456)
   let cleanMomoPhone = momoPhone.replace(/\s+/g, '').replace(/[^0-9+]/g, '');
   if (cleanMomoPhone.startsWith('0') && cleanMomoPhone.length === 10) {
     cleanMomoPhone = '233' + cleanMomoPhone.slice(1);
   }
 
-  // 1. Paystack Ghana Mobile Money Direct Charge (if PAYSTACK_SECRET_KEY is configured in .env)
-  if (process.env.PAYSTACK_SECRET_KEY) {
+  // Direct Paystack Mobile Money Charge API
+  if (secretKey) {
     try {
-      const paystackEmail = (patient && patient.email) ? patient.email : `patient${patientId}@opticare.local`;
+      const paystackEmail = (patient && patient.email && patient.email.includes('@')) ? patient.email : `patient${patientId}@opticare.local`;
       const amountInPesewas = Math.round(totalAmount * 100);
 
       const paystackResponse = await fetch('https://api.paystack.co/charge', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          'Authorization': `Bearer ${secretKey.trim()}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -814,29 +947,18 @@ app.post('/patients/:id/invoices/pay-momo', requireLogin, requireRole('admin', '
       console.log('[Paystack MoMo Charge Response]:', data);
       if (data.data && data.data.reference) {
         transactionReference = data.data.reference;
-        livePromptTriggered = true;
       }
     } catch (err) {
       console.error('[Paystack MoMo API Error]:', err.message);
     }
   }
 
-  // 2. Hubtel Direct Debit MoMo (if HUBTEL_CLIENT_ID configured in .env)
-  else if (process.env.HUBTEL_CLIENT_ID && process.env.HUBTEL_CLIENT_SECRET) {
-    try {
-      console.log(`[Hubtel MoMo Prompt] Dispatched to ${cleanMomoPhone} for GHS ${totalAmount.toFixed(2)}`);
-      livePromptTriggered = true;
-    } catch (err) {
-      console.error('[Hubtel MoMo Error]:', err.message);
-    }
-  }
-
   // Record payment in database
   db.prepare(`
     UPDATE invoices
-    SET status = 'paid', payment_method = 'momo'
+    SET status = 'paid', payment_method = ?
     WHERE patient_id = ? AND status = 'unpaid'
-  `).run(patientId);
+  `).run(`Mobile Money (${network.toUpperCase()})`, patientId);
 
   // Complete patient's queue check
   db.prepare("UPDATE queue_entries SET status = 'completed' WHERE patient_id = ? AND status IN ('ready_for_billing', 'in_progress', 'waiting')").run(patientId);
@@ -852,7 +974,7 @@ app.post('/patients/:id/invoices/pay-momo', requireLogin, requireRole('admin', '
   console.log(`[OptiCare POS] MoMo Payment of GHS ${totalAmount.toFixed(2)} settled for Patient #${patientId} (Ref: ${transactionReference})`);
 
   // Redirect to official printable receipt
-  res.redirect('/patients/' + patientId + '/bill-print?paid=1&momo=1&ref=' + transactionReference);
+  res.redirect('/patients/' + patientId + '/bill-print?paid=1&momo=1&ref=' + encodeURIComponent(transactionReference));
 });
 
 // Pay Individual Invoice Line Item

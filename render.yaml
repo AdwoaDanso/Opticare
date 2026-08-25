@@ -21,3 +21,7 @@ services:
         sync: false
       - key: CALCOM_API_KEY
         sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
