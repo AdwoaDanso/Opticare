@@ -1399,8 +1399,7 @@ app.post('/certificates/:id/renew', requireLogin, requireRole('admin'), (req, re
 // ===== Staff & Doctor Login Management (Admin Only) =====
 
 app.get('/staff', requireLogin, requireRole('admin'), (req, res) => {
-  const users = db.prepare('SELECT id, email, name, role, room, created_at FROM users ORDER BY role, name').all();
-  res.render('staff', { users: users });
+  res.redirect('/settings');
 });
 
 app.post('/staff', requireLogin, requireRole('admin'), (req, res) => {
