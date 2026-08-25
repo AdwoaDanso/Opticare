@@ -53,6 +53,29 @@
       <% } %>
     </div>
 
+    <!-- Registration Confirmation Alert -->
+    <% if (typeof registeredName !== 'undefined' && registeredName) { %>
+      <div class="card" style="background:#F0FDF4; border:1px solid #BBF7D0; border-left:4px solid #166534; padding:16px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <div style="font-size:14.5px; font-weight:700; color:#166534; display:flex; align-items:center; gap:8px;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#166534" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Patient <%= registeredName %> Registered Successfully!
+          </div>
+          <div style="font-size:13px; color:#14532D; margin-top:2px;">
+            Patient ID: <strong>#<%= registeredId %></strong> · Saved to directory. Ready for queue check-in or clinical intake.
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <form action="/queue/checkin/<%= registeredId %>" method="POST" style="margin:0;">
+            <button type="submit" class="btn btn-sm" style="background:#166534; font-weight:700; padding:8px 16px;">
+              Check In to Live Queue &rarr;
+            </button>
+          </form>
+          <a href="/patients/<%= registeredId %>" class="btn btn-sm btn-secondary">Open Profile</a>
+        </div>
+      </div>
+    <% } %>
+
     <!-- Register Patient Form -->
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -92,7 +115,11 @@
           </div>
         </div>
 
-        <div class="form-row" style="margin-bottom:14px;">
+        <div class="form-row" style="margin-bottom:12px;">
+          <div class="form-group" style="flex:2;">
+            <label style="font-size:12px; font-weight:600;">Residential Address / Location</label>
+            <input type="text" name="address" placeholder="e.g. East Legon, Accra / House No. 12, Kumasi" />
+          </div>
           <div class="form-group" style="flex:1;">
             <label style="font-size:12px; font-weight:600;">Gender</label>
             <select name="gender" style="width:100%; padding:10px; border-radius:10px; border:1px solid var(--border);">
@@ -106,13 +133,13 @@
             <label style="font-size:12px; font-weight:600;">Age</label>
             <input type="number" name="age" placeholder="e.g. 35" />
           </div>
-          <div class="form-group" style="flex:2;">
-            <label style="font-size:12px; font-weight:600;">Occupation / Visual Demands</label>
-            <input type="text" name="occupation" placeholder="e.g. Accountant, Driver, Student" />
-          </div>
         </div>
 
         <div class="form-row" style="margin-bottom:14px;">
+          <div class="form-group" style="flex:1;">
+            <label style="font-size:12px; font-weight:600;">Occupation / Visual Demands</label>
+            <input type="text" name="occupation" placeholder="e.g. Accountant, Driver, Student" />
+          </div>
           <div class="form-group" style="flex:1;">
             <label style="font-size:12px; font-weight:600;">Emergency Contact Name</label>
             <input type="text" name="emergency_contact_name" placeholder="e.g. Kofi Mensah (Brother)" />
@@ -123,7 +150,7 @@
           </div>
         </div>
 
-        <button type="submit" class="btn" style="padding:10px 24px;">Register Patient</button>
+        <button type="submit" class="btn" style="padding:10px 24px; font-weight:700; background:#166534;">Register Patient</button>
       </form>
     </div>
 
@@ -132,7 +159,7 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
         <h2 style="margin:0; color:#0B3D2E;">Patient Directory</h2>
         <form action="/" method="GET" style="display:flex; gap:8px; margin:0;">
-          <input type="text" name="q" placeholder="Search by name or phone..." style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); font-size:13px;" />
+          <input type="text" name="q" placeholder="Search by name, phone, address..." style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); font-size:13px;" />
           <button type="submit" class="btn btn-sm btn-secondary">Search</button>
         </form>
       </div>
@@ -148,6 +175,7 @@
                 <div class="name"><a href="/patients/<%= patient.id %>" style="font-weight:700;"><%= patient.full_name %></a></div>
                 <div class="meta">
                   ID: #<%= patient.id %> | <%= patient.phone || 'No phone on file' %>
+                  <% if (patient.address) { %> | <%= patient.address %><% } %>
                   <% if (patient.gender || patient.age) { %> | <%= patient.gender || '' %> <%= patient.age ? '(' + patient.age + ' yrs)' : '' %><% } %>
                   <% if (patient.occupation) { %> | <%= patient.occupation %><% } %>
                 </div>

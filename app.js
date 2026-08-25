@@ -238,12 +238,14 @@ app.get('/dashboard', requireLogin, (req, res) => {
 
 app.get('/', requireLogin, (req, res) => {
   const searchTerm = req.query.q;
+  const registeredName = req.query.name || null;
+  const registeredId = req.query.id || null;
 
   let patients;
   if (searchTerm) {
-    patients = db.prepare('SELECT * FROM patients WHERE full_name LIKE ?').all('%' + searchTerm + '%');
+    patients = db.prepare('SELECT * FROM patients WHERE full_name LIKE ? OR phone LIKE ? OR address LIKE ? ORDER BY id DESC').all('%' + searchTerm + '%', '%' + searchTerm + '%', '%' + searchTerm + '%');
   } else {
-    patients = db.prepare('SELECT * FROM patients').all();
+    patients = db.prepare('SELECT * FROM patients ORDER BY id DESC').all();
   }
 
   const totalPatients = db.prepare('SELECT COUNT(*) AS count FROM patients').get().count;
@@ -260,6 +262,8 @@ app.get('/', requireLogin, (req, res) => {
     waitingCount: waitingCount,
     unpaidCount: unpaidCount,
     expiringCertificates: expiringCertificates,
+    registeredName: registeredName,
+    registeredId: registeredId,
   });
 });
 
@@ -267,6 +271,7 @@ app.post('/patients', requireLogin, (req, res) => {
   const fullName = req.body.full_name;
   const phone = req.body.phone;
   const email = req.body.email;
+  const address = req.body.address || null;
   const gender = req.body.gender || null;
   const dob = req.body.dob || null;
   const age = req.body.age ? parseInt(req.body.age) : null;
@@ -287,7 +292,7 @@ app.post('/patients', requireLogin, (req, res) => {
     }
 
     if (existing) {
-      const patients = db.prepare('SELECT * FROM patients').all();
+      const patients = db.prepare('SELECT * FROM patients ORDER BY id DESC').all();
       const totalPatients = db.prepare('SELECT COUNT(*) AS count FROM patients').get().count;
       const waitingCount = db.prepare("SELECT COUNT(*) AS count FROM queue_entries WHERE status = 'waiting'").get().count;
       const unpaidCount = res.locals.currentUser.role === 'doctor' ? null : db.prepare("SELECT COUNT(*) AS count FROM invoices WHERE status = 'unpaid'").get().count;
@@ -305,14 +310,16 @@ app.post('/patients', requireLogin, (req, res) => {
         duplicateWarning: existing,
         pendingFullName: fullName,
         pendingPhone: phone,
+        registeredName: null,
+        registeredId: null,
       });
     }
   }
 
   const insertResult = db.prepare(`
-    INSERT INTO patients (full_name, phone, email, gender, dob, age, occupation, medical_history, allergies, emergency_contact_name, emergency_contact_phone, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-  `).run(fullName, phone, email, gender, dob, age, occupation, medicalHistory, allergies, emergencyContactName, emergencyContactPhone);
+    INSERT INTO patients (full_name, phone, email, address, gender, dob, age, occupation, medical_history, allergies, emergency_contact_name, emergency_contact_phone, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+  `).run(fullName, phone, email, address, gender, dob, age, occupation, medicalHistory, allergies, emergencyContactName, emergencyContactPhone);
 
   const newPatientId = insertResult.lastInsertRowid;
 
@@ -323,7 +330,8 @@ app.post('/patients', requireLogin, (req, res) => {
     dispatchSMS(newPatientId, phone.trim(), welcomeSms);
   }
 
-  res.redirect('/patients/' + newPatientId);
+  // Remain on Patients Directory with confirmation alert
+  res.redirect('/?registered=1&name=' + encodeURIComponent(fullName) + '&id=' + newPatientId);
 });
 
 
@@ -332,6 +340,7 @@ app.post('/patients/:id/update', requireLogin, (req, res) => {
   const fullName = req.body.full_name;
   const phone = req.body.phone;
   const email = req.body.email;
+  const address = req.body.address || null;
   const gender = req.body.gender;
   const age = req.body.age ? parseInt(req.body.age) : null;
   const occupation = req.body.occupation;
@@ -342,10 +351,10 @@ app.post('/patients/:id/update', requireLogin, (req, res) => {
 
   db.prepare(`
     UPDATE patients
-    SET full_name = ?, phone = ?, email = ?, gender = ?, age = ?, occupation = ?, medical_history = ?, allergies = ?,
+    SET full_name = ?, phone = ?, email = ?, address = ?, gender = ?, age = ?, occupation = ?, medical_history = ?, allergies = ?,
         emergency_contact_name = ?, emergency_contact_phone = ?
     WHERE id = ?
-  `).run(fullName, phone, email, gender, age, occupation, medicalHistory, allergies, emergencyContactName, emergencyContactPhone, patientId);
+  `).run(fullName, phone, email, address, gender, age, occupation, medicalHistory, allergies, emergencyContactName, emergencyContactPhone, patientId);
 
   res.redirect('/patients/' + patientId);
 });

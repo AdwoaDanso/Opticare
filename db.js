@@ -177,6 +177,7 @@ try { db.exec('ALTER TABLE patients ADD COLUMN age INTEGER'); } catch (err) {}
 try { db.exec('ALTER TABLE patients ADD COLUMN occupation TEXT'); } catch (err) {}
 try { db.exec('ALTER TABLE patients ADD COLUMN medical_history TEXT'); } catch (err) {}
 try { db.exec('ALTER TABLE patients ADD COLUMN allergies TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE patients ADD COLUMN address TEXT'); } catch (err) {}
 
 // Optometric Examination Columns
 try { db.exec('ALTER TABLE examinations ADD COLUMN chief_complaint TEXT'); } catch (err) {}
