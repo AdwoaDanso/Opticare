@@ -259,6 +259,13 @@ try { db.exec('ALTER TABLE users ADD COLUMN name TEXT'); } catch (err) {}
 try { db.exec('ALTER TABLE users ADD COLUMN room TEXT'); } catch (err) {}
 try { db.exec('ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP'); } catch (err) {}
 try { db.exec('ALTER TABLE queue_entries ADD COLUMN doctor_name TEXT'); } catch (err) {}
+try { db.exec('ALTER TABLE queue_entries ADD COLUMN visit_reason TEXT'); } catch (err) {}
+
+// Appointments & Reviews Enhancements
+try { db.exec("ALTER TABLE reminders ADD COLUMN appointment_time TEXT DEFAULT '09:00'"); } catch (err) {}
+try { db.exec('ALTER TABLE reminders ADD COLUMN doctor_name TEXT'); } catch (err) {}
+try { db.exec("ALTER TABLE reminders ADD COLUMN appointment_type TEXT DEFAULT 'Clinical Review'"); } catch (err) {}
+try { db.exec('ALTER TABLE reminders ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP'); } catch (err) {}
 
 // Set initial names and rooms on default users if empty
 try {

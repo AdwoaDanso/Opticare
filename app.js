@@ -1474,13 +1474,29 @@ app.get('/export/patients', requireLogin, requireRole('admin'), (req, res) => {
   res.send(csv);
 });
 
-// ===== Appointments (Cal.com Live Sync) =====
+// ===== Unified Appointments & Reviews Hub (Clinic Reviews + Cal.com Sync) =====
 
 app.get('/appointments', requireLogin, async (req, res) => {
-  let bookings = [];
-  let todayBookings = [];
-  let upcomingBookings = [];
+  const todayStr = new Date().toISOString().slice(0, 10);
 
+  // 1. Fetch all clinic appointments & reviews from SQLite reminders
+  const allAppointments = db.prepare(`
+    SELECT reminders.*, patients.full_name, patients.phone, patients.email, patients.gender, patients.age
+    FROM reminders
+    JOIN patients ON patients.id = reminders.patient_id
+    ORDER BY reminders.due_date ASC, reminders.appointment_time ASC
+  `).all();
+
+  const todayAppointments = allAppointments.filter(a => a.due_date === todayStr);
+  const upcomingAppointments = allAppointments.filter(a => a.due_date > todayStr);
+  const pastAppointments = allAppointments.filter(a => a.due_date < todayStr);
+
+  // 2. Fetch active doctors and patient list for booking modal
+  const doctorsList = db.prepare("SELECT id, name, email, room FROM users WHERE role IN ('doctor', 'admin') ORDER BY name").all();
+  const patientsList = db.prepare("SELECT id, full_name, phone, age FROM patients ORDER BY full_name").all();
+
+  // 3. Live Cal.com Sync (if CALCOM_API_KEY configured)
+  let calBookings = [];
   if (process.env.CALCOM_API_KEY) {
     try {
       const response = await fetch('https://api.cal.com/v2/bookings', {
@@ -1491,24 +1507,118 @@ app.get('/appointments', requireLogin, async (req, res) => {
       });
       const result = await response.json();
       if (result && Array.isArray(result.data)) {
-        bookings = result.data;
+        calBookings = result.data;
       } else if (result && Array.isArray(result.bookings)) {
-        bookings = result.bookings;
+        calBookings = result.bookings;
       }
     } catch (calErr) {
       console.error('[Cal.com API Sync Error]:', calErr.message);
     }
   }
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  todayBookings = bookings.filter(b => b.startTime && b.startTime.startsWith(todayStr));
-  upcomingBookings = bookings.filter(b => b.startTime && new Date(b.startTime) >= new Date());
-
   res.render('appointments', {
-    bookings: bookings,
-    todayBookings: todayBookings,
-    upcomingBookings: upcomingBookings
+    todayAppointments: todayAppointments,
+    upcomingAppointments: upcomingAppointments,
+    pastAppointments: pastAppointments,
+    allAppointments: allAppointments,
+    doctorsList: doctorsList,
+    patientsList: patientsList,
+    calBookings: calBookings,
+    todayStr: todayStr
   });
+});
+
+// Book New Appointment / Follow-up Review
+app.post('/appointments', requireLogin, (req, res) => {
+  const { patient_id, due_date, appointment_time, doctor_name, appointment_type, note, send_sms } = req.body;
+
+  if (!patient_id || !due_date) {
+    return res.redirect('/appointments?error=missing_fields');
+  }
+
+  const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(patient_id);
+  const timeVal = appointment_time || '09:00';
+  const typeVal = appointment_type || 'Clinical Review';
+  const docVal = doctor_name || 'Attending Optometrist';
+
+  db.prepare(`
+    INSERT INTO reminders (patient_id, due_date, appointment_time, doctor_name, appointment_type, note, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)
+  `).run(patient_id, due_date, timeVal, docVal, typeVal, note || `${typeVal} with ${docVal}`);
+
+  // Automated SMS Booking Confirmation
+  if (send_sms && patient && patient.phone) {
+    const firstName = patient.full_name.split(' ')[0] || patient.full_name;
+    const formattedDate = new Date(due_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    const smsBody = `Hello ${firstName}, your eye review appointment at OptiCare Eye Clinic has been scheduled for ${formattedDate} at ${timeVal} with ${docVal}. Purpose: ${typeVal}. Please arrive 10 mins early.`;
+    dispatchSMS(patient.id, patient.phone, smsBody);
+  }
+
+  // If booked from patient chart, return there; otherwise return to appointments hub
+  const referer = req.get('Referrer');
+  if (referer && referer.includes('/patients/')) {
+    return res.redirect('/patients/' + patient_id + '?tab=reminders&booked=1');
+  }
+
+  res.redirect('/appointments?booked=1');
+});
+
+// 1-Click Check-In for Arriving Appointment Patient into Live Queue
+app.post('/appointments/:id/checkin', requireLogin, (req, res) => {
+  const appointmentId = req.params.id;
+  const apt = db.prepare(`
+    SELECT reminders.*, patients.full_name, patients.phone
+    FROM reminders
+    JOIN patients ON patients.id = reminders.patient_id
+    WHERE reminders.id = ?
+  `).get(appointmentId);
+
+  if (apt) {
+    // Add patient to Live Queue
+    const reasonText = `${apt.appointment_type || 'Scheduled Review'} (${apt.doctor_name || 'Optometry'})`;
+    db.prepare('INSERT INTO queue_entries (patient_id, status, visit_reason) VALUES (?, ?, ?)').run(apt.patient_id, 'waiting', reasonText);
+    
+    // Mark appointment as checked-in
+    db.prepare("UPDATE reminders SET status = 'checked_in' WHERE id = ?").run(appointmentId);
+
+    // Queue position count
+    const waitingCount = db.prepare("SELECT COUNT(*) AS count FROM queue_entries WHERE status = 'waiting'").get().count;
+
+    // Send Queue SMS
+    if (apt.phone) {
+      const firstName = apt.full_name.split(' ')[0] || apt.full_name;
+      const smsText = `Hello ${firstName}, you are checked in for your scheduled appointment at OptiCare Eye Clinic. Queue position: #${waitingCount}. Please have a seat in the waiting area.`;
+      dispatchSMS(apt.patient_id, apt.phone, smsText);
+    }
+
+    return res.redirect('/queue?checkedin=1');
+  }
+
+  res.redirect('/appointments');
+});
+
+// Send Reminder SMS for a Scheduled Appointment
+app.post('/appointments/:id/send-sms', requireLogin, (req, res) => {
+  const appointmentId = req.params.id;
+  const apt = db.prepare(`
+    SELECT reminders.*, patients.full_name, patients.phone
+    FROM reminders
+    JOIN patients ON patients.id = reminders.patient_id
+    WHERE reminders.id = ?
+  `).get(appointmentId);
+
+  if (apt && apt.phone) {
+    const firstName = apt.full_name.split(' ')[0] || apt.full_name;
+    const formattedDate = new Date(apt.due_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    const timeVal = apt.appointment_time || '09:00';
+    const docVal = apt.doctor_name || 'Optometrist';
+    const smsText = `Reminder: Hello ${firstName}, you have an upcoming eye appointment at OptiCare Eye Clinic on ${formattedDate} at ${timeVal} with ${docVal}. Note: ${apt.note || 'Review'}. Tel: 0550001234.`;
+    
+    dispatchSMS(apt.patient_id, apt.phone, smsText);
+    db.prepare("UPDATE reminders SET status = 'sent' WHERE id = ?").run(appointmentId);
+  }
+
+  res.redirect('/appointments?reminded=1');
 });
 
 // ===== OpenAI Clinical Diagnostic & Management Assistant =====

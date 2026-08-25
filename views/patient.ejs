@@ -1091,68 +1091,107 @@
     <!-- ============================================================== -->
     <div id="tab-reminders" class="tab-pane">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <h2 style="margin:0; font-size:1.25rem; color:var(--forest);">Scheduled Appointments &amp; Recalls</h2>
-        <button class="btn" onclick="toggleElement('newReminderForm')">
+        <div>
+          <h2 style="margin:0; font-size:1.25rem; color:var(--forest);">Scheduled Appointments &amp; Clinical Reviews</h2>
+          <span style="font-size:12.5px; color:#64748B;">Book follow-up exams, set review dates, and dispatch automated patient reminders.</span>
+        </div>
+        <button class="btn" onclick="toggleElement('newReminderForm')" style="background:#166534; display:inline-flex; align-items:center; gap:6px;">
           <svg class="svg-icon sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Schedule Review / Reminder
+          + Book Next Appointment / Review
         </button>
       </div>
 
-      <!-- New Reminder Form -->
-      <div id="newReminderForm" class="collapsible-form" style="display:none; background:#F8FAFC; border:1px solid #CBD5E1; border-radius:12px; padding:24px; margin-bottom:24px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #E2E8F0; padding-bottom:12px;">
-          <h3 style="color:#0B3D2E; margin:0;">Schedule Review / Reminder</h3>
+      <!-- New Appointment & Review Form -->
+      <div id="newReminderForm" class="collapsible-form" style="display:none; background:#F8FAFC; border:1px solid #CBD5E1; border-radius:12px; padding:20px; margin-bottom:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #E2E8F0; padding-bottom:10px;">
+          <h3 style="color:#0B3D2E; margin:0; font-size:1.15rem;">Schedule Review Appointment for <%= patient.full_name %></h3>
           <button type="button" class="btn btn-sm btn-secondary" onclick="toggleElement('newReminderForm')">Close</button>
         </div>
 
-        <form action="/patients/<%= patient.id %>/reminders" method="POST">
-          <div class="grid-2" style="margin-bottom:16px;">
+        <form action="/appointments" method="POST">
+          <input type="hidden" name="patient_id" value="<%= patient.id %>" />
+          
+          <div class="grid-3" style="margin-bottom:12px;">
             <div class="form-group">
-              <label style="font-size:11px; font-weight:600;">Due Review Date</label>
+              <label style="font-size:11px; font-weight:600;">Review Date</label>
               <input type="date" name="due_date" required />
             </div>
             <div class="form-group">
-              <label style="font-size:11px; font-weight:600;">Reminder Note / Review Purpose</label>
-              <input type="text" name="note" placeholder="e.g. 6-Month IOP review, Spectacle collection" required />
+              <label style="font-size:11px; font-weight:600;">Appointment Time</label>
+              <input type="time" name="appointment_time" value="10:00" required />
+            </div>
+            <div class="form-group">
+              <label style="font-size:11px; font-weight:600;">Attending Doctor</label>
+              <select name="doctor_name" style="width:100%; padding:9px; border-radius:8px; border:1px solid var(--border); font-size:13px;">
+                <option value="Dr. Kwesi Asante Boateng, OD">Dr. Kwesi Asante Boateng, OD (Room 1)</option>
+                <option value="Dr. Efua Serwaa Mensah, OD">Dr. Efua Serwaa Mensah, OD (Room 2)</option>
+              </select>
             </div>
           </div>
-          <div style="display:flex; gap:12px;">
-            <button type="submit" class="btn">Save Reminder</button>
-            <button type="button" class="btn btn-secondary" onclick="toggleElement('newReminderForm')">Cancel</button>
+
+          <div class="grid-2" style="margin-bottom:14px;">
+            <div class="form-group">
+              <label style="font-size:11px; font-weight:600;">Appointment Category / Type</label>
+              <select name="appointment_type" style="width:100%; padding:9px; border-radius:8px; border:1px solid var(--border); font-size:13px;">
+                <option value="6-Month IOP &amp; Glaucoma Review">6-Month IOP &amp; Glaucoma Review</option>
+                <option value="Post-Mydriatic Refraction Review">Post-Mydriatic Refraction Review</option>
+                <option value="Spectacle / Lens Fitting &amp; Collection">Spectacle / Lens Fitting &amp; Collection</option>
+                <option value="Allergic Conjunctivitis Review">Allergic Conjunctivitis Review</option>
+                <option value="Diabetic Eye Screening Follow-up">Diabetic Eye Screening Follow-up</option>
+                <option value="Comprehensive Annual Eye Exam">Comprehensive Annual Eye Exam</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="font-size:11px; font-weight:600;">Instructions / Clinical Notes</label>
+              <input type="text" name="note" placeholder="e.g. Bring current eye drops and reading glasses" />
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #E2E8F0; padding-top:12px;">
+            <label style="display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:#0B3D2E; cursor:pointer;">
+              <input type="checkbox" name="send_sms" value="1" checked style="width:16px; height:16px;" />
+              Send instant booking confirmation SMS to <%= patient.phone || 'patient' %>
+            </label>
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="btn btn-secondary" onclick="toggleElement('newReminderForm')">Cancel</button>
+              <button type="submit" class="btn" style="background:#166534; font-weight:700;">+ Save &amp; Dispatch Appointment</button>
+            </div>
           </div>
         </form>
       </div>
 
       <div class="card" style="margin-bottom:24px;">
         <% if (reminders.length === 0) { %>
-          <div class="empty-state">No scheduled recalls or reviews on file for this patient.</div>
+          <div class="empty-state">No scheduled reviews or appointments on file for this patient.</div>
         <% } else { %>
           <% reminders.forEach(function(reminder) { %>
-            <div class="list-row">
+            <div class="list-row" style="align-items:center;">
               <div>
-                <div class="name" style="font-weight:600;"><%= reminder.note %></div>
-                <div class="meta">Due Date: <%= reminder.due_date %></div>
-              </div>
-              <% if (reminder.status === 'pending') { %>
-                <div style="display:flex; gap:6px;">
-                  <form action="/reminders/<%= reminder.id %>/send" method="POST" style="margin:0;">
-                    <input type="hidden" name="channel" value="sms" />
-                    <button type="submit" class="btn btn-sm" style="background:#166534; display:inline-flex; align-items:center; gap:4px;">
-                      <svg class="svg-icon sm" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      Send SMS
-                    </button>
-                  </form>
-                  <form action="/reminders/<%= reminder.id %>/send" method="POST" style="margin:0;">
-                    <input type="hidden" name="channel" value="email" />
-                    <button type="submit" class="btn btn-sm btn-secondary">
-                      <svg class="svg-icon sm" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                      Email
-                    </button>
-                  </form>
+                <div class="name" style="font-weight:700; color:#0B3D2E;">
+                  <%= reminder.appointment_type || reminder.note %>
+                  <% if (reminder.doctor_name) { %>
+                    <span style="font-weight:400; font-size:12px; color:#64748B;">(Attending: <%= reminder.doctor_name %>)</span>
+                  <% } %>
                 </div>
-              <% } else { %>
-                <span class="badge badge-success" style="font-size:11px; padding:3px 8px;">DISPATCHED</span>
-              <% } %>
+                <div class="meta" style="margin-top:2px;">
+                  <span>Scheduled: <strong><%= reminder.due_date %></strong> at <strong><%= reminder.appointment_time || '09:00' %></strong></span>
+                  <% if (reminder.note && reminder.note !== reminder.appointment_type) { %>
+                    <span style="margin-left:8px; color:#475569;">· <%= reminder.note %></span>
+                  <% } %>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <% if (reminder.status === 'checked_in') { %>
+                  <span class="badge badge-success" style="font-size:10.5px;">IN CLINIC QUEUE</span>
+                <% } else { %>
+                  <form action="/appointments/<%= reminder.id %>/checkin" method="POST" style="margin:0;">
+                    <button type="submit" class="btn btn-sm" style="background:#166534; font-size:11px; padding:4px 10px;">Check-In &rarr;</button>
+                  </form>
+                  <form action="/appointments/<%= reminder.id %>/send-sms" method="POST" style="margin:0;">
+                    <button type="submit" class="btn btn-sm btn-secondary" style="font-size:11px; padding:4px 8px;">Send SMS</button>
+                  </form>
+                <% } %>
+              </div>
             </div>
           <% }); %>
         <% } %>
