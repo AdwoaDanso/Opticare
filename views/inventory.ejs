@@ -516,7 +516,7 @@
                       <form action="/inventory/<%= item.id %>/adjust" method="POST" style="margin:0;">
                         <input type="hidden" name="delta" value="-1" />
                         <button type="submit" class="stepper-btn minus" title="Decrease stock by 1" <%= item.quantity === 0 ? 'disabled' : '' %>>
-                          &minus;1
+                          -1
                         </button>
                       </form>
                       <div class="stepper-divider"></div>
