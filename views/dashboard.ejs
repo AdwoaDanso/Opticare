@@ -187,14 +187,33 @@
 
 
     <!-- Charts: Monthly Consultations + Diagnosis Distribution -->
-    <div style="display:flex; gap:24px; flex-wrap:wrap;">
-      <div class="card" style="flex:2; min-width:320px;">
-        <h2 style="margin-top:0;">Monthly Consultations (Last 6 Months)</h2>
-        <canvas id="consultationsChart" height="220"></canvas>
+    <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:24px;">
+      <div class="card" style="flex:2; min-width:320px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h2 style="margin:0; font-size:1.15rem; color:#0B3D2E;">Monthly Consultations (Last 6 Months)</h2>
+          <span style="font-size:11.5px; color:#64748B; font-weight:600;">Clinical Exams Conducted</span>
+        </div>
+        <div style="position:relative; min-height:220px;">
+          <canvas id="consultationsChart" height="220"></canvas>
+        </div>
       </div>
-      <div class="card" style="flex:1; min-width:260px;">
-        <h2 style="margin-top:0;">Diagnosis Distribution</h2>
-        <canvas id="diagnosisChart" height="220"></canvas>
+      <div class="card" style="flex:1; min-width:280px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h2 style="margin:0; font-size:1.15rem; color:#0B3D2E;">Diagnosis Distribution</h2>
+          <span style="font-size:11.5px; color:#64748B; font-weight:600;">ICD-10 Categorization</span>
+        </div>
+        <div style="position:relative; min-height:220px; display:flex; align-items:center; justify-content:center;">
+          <% if (!diagnosisDistribution || diagnosisDistribution.length === 0) { %>
+            <div style="text-align:center; padding:20px; color:#94A3B8;">
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#CBD5E1" stroke-width="1.5" style="margin:0 auto 8px; display:block;"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+              <div style="font-size:12.5px; font-weight:600; color:#64748B;">No Clinical Diagnoses Yet</div>
+              <div style="font-size:11.5px; color:#94A3B8; margin-top:3px;">Examinations saved by doctors will categorize here automatically.</div>
+            </div>
+            <canvas id="diagnosisChart" height="220" style="display:none;"></canvas>
+          <% } else { %>
+            <canvas id="diagnosisChart" height="220"></canvas>
+          <% } %>
+        </div>
       </div>
     </div>
 
@@ -281,40 +300,73 @@
   const monthlyConsultations = <%- JSON.stringify(monthlyConsultations) %>;
   const diagnosisDistribution = <%- JSON.stringify(diagnosisDistribution) %>;
 
-  new Chart(document.getElementById('consultationsChart'), {
-    type: 'bar',
-    data: {
-      labels: monthlyConsultations.map(function(row) { return row.month || 'N/A'; }),
-      datasets: [{
-        label: 'Consultations',
-        data: monthlyConsultations.map(function(row) { return row.count; }),
-        backgroundColor: '#22A366',
-        borderRadius: 6,
-      }],
-    },
-    options: {
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-    },
-  });
+  if (document.getElementById('consultationsChart')) {
+    new Chart(document.getElementById('consultationsChart'), {
+      type: 'bar',
+      data: {
+        labels: monthlyConsultations.map(function(row) { return row.month || 'N/A'; }),
+        datasets: [{
+          label: 'Consultations',
+          data: monthlyConsultations.map(function(row) { return row.count; }),
+          backgroundColor: '#166534',
+          hoverBackgroundColor: '#0B3D2E',
+          borderRadius: 6,
+          borderSkipped: false,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) { return ' ' + ctx.parsed.y + ' examination' + (ctx.parsed.y === 1 ? '' : 's'); }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            suggestedMax: 5,
+            ticks: { precision: 0, stepSize: 1, color: '#64748B' },
+            grid: { color: '#F1F5F9' }
+          },
+          x: {
+            ticks: { color: '#475569', font: { weight: '600', size: 11.5 } },
+            grid: { display: false }
+          }
+        },
+      },
+    });
+  }
 
-  const diagColors = ['#0B3D2E','#22A366','#7FD1A6','#B8E2CB','#F59E0B','#EF4444','#6366F1','#8B5CF6'];
-  new Chart(document.getElementById('diagnosisChart'), {
-    type: 'doughnut',
-    data: {
-      labels: diagnosisDistribution.map(function(row) { return row.category; }),
-      datasets: [{
-        data: diagnosisDistribution.map(function(row) { return row.count; }),
-        backgroundColor: diagColors,
-        borderWidth: 1,
-      }],
-    },
-    options: {
-      plugins: {
-        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } }
-      }
-    },
-  });
+  if (document.getElementById('diagnosisChart') && diagnosisDistribution && diagnosisDistribution.length > 0) {
+    const diagColors = ['#0B3D2E','#166534','#22A366','#4ADE80','#F59E0B','#EF4444','#6366F1','#8B5CF6'];
+    new Chart(document.getElementById('diagnosisChart'), {
+      type: 'doughnut',
+      data: {
+        labels: diagnosisDistribution.map(function(row) { return row.category; }),
+        datasets: [{
+          data: diagnosisDistribution.map(function(row) { return row.count; }),
+          backgroundColor: diagColors,
+          borderWidth: 2,
+          borderColor: '#ffffff',
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { font: { size: 11, weight: '500' }, boxWidth: 12, padding: 12 }
+          }
+        },
+        cutout: '65%'
+      },
+    });
+  }
 </script>
 </body>
 </html>

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: opticare-clinic
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: node app.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ARKESEL_API_KEY
+        sync: false
+      - key: ARKESEL_SECRET_KEY
+        sync: false
+      - key: SMS_SENDER_ID
+        value: Arkesel
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CALCOM_API_KEY
+        sync: false

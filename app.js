@@ -135,14 +135,30 @@ app.get('/dashboard', requireLogin, (req, res) => {
     LIMIT 5
   `).all();
 
-  // Monthly consultations (exams done per month, last 6 months)
-  const monthlyConsultations = db.prepare(`
+  // Monthly consultations (continuous last 6 months timeline)
+  const rawMonthlyConsultations = db.prepare(`
     SELECT strftime('%Y-%m', exam_date) AS month, COUNT(*) AS count
     FROM examinations
     WHERE exam_date >= date('now', '-6 months')
     GROUP BY month
     ORDER BY month ASC
   `).all();
+
+  const monthlyCountsMap = {};
+  rawMonthlyConsultations.forEach(r => { if (r.month) monthlyCountsMap[r.month] = r.count; });
+
+  const monthlyConsultations = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const yyyyMm = d.toISOString().slice(0, 7);
+    const monthLabel = d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+    monthlyConsultations.push({
+      month: monthLabel,
+      rawMonth: yyyyMm,
+      count: monthlyCountsMap[yyyyMm] || 0
+    });
+  }
 
   // Diagnosis distribution for pie chart
   const diagnosisDistribution = db.prepare(`
@@ -1745,6 +1761,7 @@ app.get('/about', (req, res) => {
   res.send('About OptiCare');
 });
 
-app.listen(3000, () => {
-  console.log('Server running on http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`OptiCare Eye Clinic Server running on port ${PORT}`);
 });

@@ -119,7 +119,37 @@ const ii = db.prepare('INSERT INTO invoices(patient_id,category,description,unit
 ].forEach(r => ii.run(...r));
 console.log('Invoices: 29 items created.');
 
-// 6. SEED LIVE QUEUE ENTRIES
+// 6. SEED CLINICAL EXAMINATIONS ACROSS LAST 6 MONTHS
+const iexam = db.prepare(`
+  INSERT INTO examinations(
+    patient_id, chief_complaint, visual_acuity_right, visual_acuity_left,
+    refraction_sphere_right, refraction_cyl_right, refraction_axis_right,
+    refraction_sphere_left, refraction_cyl_left, refraction_axis_left,
+    eye_pressure_right, eye_pressure_left, diagnosis, icd10_code, management_plan, exam_date
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`);
+
+[
+  [1, 'Blurry distance vision when sewing', '6/18', '6/24', '-1.50', '-0.50', 90, '-1.75', '-0.75', 85, 14, 15, 'Compound Myopic Astigmatism', 'H52.13', 'Prescribed single vision corrective glasses with anti-glare coating.', '2026-03-08 09:30:00'],
+  [2, 'Gradual reduction in vision and floaters', '6/24', '6/36', '+0.50', '-1.00', 180, '+0.75', '-1.25', 175, 18, 19, 'Nonproliferative Diabetic Retinopathy with Macular Oedema', 'E11.319', 'Urgent referral sent to Korle Bu Eye Clinic. Counselled on glycaemic control.', '2026-03-14 10:45:00'],
+  [3, 'Severe eye strain and headaches after computer work', '6/6', '6/6', '+0.50', '-0.25', 90, '+0.50', '-0.25', 90, 13, 13, 'Asthenopia / Computer Vision Fatigue', 'H53.149', 'Prescribed blue-light filtering spectacle lenses and 20-20-20 rule.', '2026-04-22 11:20:00'],
+  [4, 'Routine glaucoma review and visual field test', '6/9', '6/12', '+1.00', '0.00', 0, '+1.25', '0.00', 0, 22, 24, 'Primary Open-Angle Glaucoma (POAG)', 'H40.113', 'Continue Latanoprost 0.005% 1 drop nocte OU. Review in 6 months.', '2026-04-29 08:55:00'],
+  [5, 'Blurry blackboard vision in school', '6/36', '6/24', '-2.25', '-0.75', 10, '-2.00', '-0.50', 170, 14, 15, 'Myopia, Bilateral', 'H52.13', 'Prescribed full-time spectacle wear with polycarbonate shatter-proof lenses.', '2026-05-05 13:40:00'],
+  [6, 'Redness, foreign body sensation, and discharge', '6/6', '6/6', '0.00', '0.00', 0, '0.00', '0.00', 0, 15, 15, 'Acute Bacterial Conjunctivitis', 'H10.9', 'Prescribed Ciprofloxacin 0.3% Eye Drops QDS for 7 days. Cold compresses.', '2026-05-11 09:15:00'],
+  [7, 'Severe clouding of vision, cannot recognise faces', 'CF 1m', '6/60', '0.00', '0.00', 0, '0.00', '0.00', 0, 14, 13, 'Age-Related Nuclear Cataract, Bilateral', 'H25.9', 'Referred to KATH Ophthalmology for cataract extraction and IOL implantation.', '2026-06-18 08:45:00'],
+  [8, 'Burning, itching, and dry sensation in both eyes', '6/6', '6/6', '0.00', '0.00', 0, '0.00', '0.00', 0, 14, 14, 'Dry Eye Syndrome / MGD', 'H04.123', 'Prescribed Artificial Tears CMC 0.5% QDS and warm lid massages.', '2026-06-25 14:15:00'],
+  [9, 'Itchy red eyes during dusty weather', '6/6', '6/6', '0.00', '0.00', 0, '0.00', '0.00', 0, 15, 16, 'Allergic Conjunctivitis (Seasonal)', 'H10.9', 'Prescribed Olopatadine 0.1% eye drops BD. Avoid eye rubbing.', '2026-07-03 10:30:00'],
+  [11, 'Difficulty reading near text and Makola ledger', '6/6', '6/6', '0.00', '0.00', 0, '0.00', '0.00', 0, 14, 15, 'Presbyopia', 'H52.4', 'Prescribed +2.00 DS near reading glasses in lightweight plastic frame.', '2026-07-17 11:45:00'],
+  [14, 'Blurry night driving and glare', '6/12', '6/18', '-0.75', '-1.00', 95, '-1.00', '-1.25', 85, 16, 17, 'Myopic Astigmatism', 'H52.223', 'Prescribed anti-reflective night driving lenses.', '2026-07-07 09:15:00'],
+  [18, 'Occasional ocular throbbing and halo around lights', '6/9', '6/9', '+0.75', '0.00', 0, '+0.75', '0.00', 0, 21, 22, 'Ocular Hypertension / Glaucoma Suspect', 'H40.113', 'Advised baseline HVF 24-2 and OCT RNFL scan.', '2026-08-05 10:00:00'],
+  [20, 'Follow-up for chronic open angle glaucoma', '6/12', '6/12', '+1.25', '-0.50', 180, '+1.50', '-0.50', 180, 16, 16, 'Primary Open-Angle Glaucoma', 'H40.113', 'IOP well controlled on Timolol & Latanoprost. Continue current drops.', '2026-08-19 08:45:00'],
+  [23, 'Severe sandy feeling and grittiness', '6/6', '6/9', '0.00', '-0.50', 90, '0.00', '-0.50', 90, 15, 14, 'Dry Eye Syndrome, Bilateral', 'H04.123', 'Prescribed preservative-free lubricating drops QDS and warm lid hygiene.', '2026-08-22 10:15:00'],
+  [27, 'Distance blur and eye fatigue', '6/18', '6/18', '-1.25', '0.00', 0, '-1.25', '0.00', 0, 14, 14, 'Simple Myopia', 'H52.13', 'Prescribed single-vision distance glasses.', '2026-08-21 10:00:00'],
+  [30, 'Small print blur when reading Bible', '6/6', '6/6', '0.00', '0.00', 0, '0.00', '0.00', 0, 15, 15, 'Presbyopia', 'H52.4', 'Prescribed +1.75 DS near reading glasses.', '2026-08-22 11:15:00'],
+].forEach(r => iexam.run(...r));
+console.log('Examinations: 16 clinical records created.');
+
+// 7. SEED LIVE QUEUE ENTRIES
 const iq = db.prepare('INSERT INTO queue_entries(patient_id,status,room,checked_in_at) VALUES(?,?,?,?)');
 [
   [6, 'ready_for_billing', 'Consultation Room 1', '2026-08-22 09:00:00'],

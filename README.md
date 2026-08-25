@@ -190,12 +190,39 @@ PAYSTACK_PUBLIC_KEY=pk_live_your_paystack_public_key_here
 
 ---
 
+## ☁️ Free Cloud Deployment Guide
+
+OptiCare is fully pre-configured with **`render.yaml`** and **`Dockerfile`** for 100% free hosting on [Render.com](https://render.com) or [Railway.app](https://railway.app).
+
+### 🚀 Deploying to Render.com (Recommended & Free Forever)
+
+1. **Push your repository to GitHub**:
+   ```bash
+   git add .
+   git commit -m "feat: deploy to cloud"
+   git push origin main
+   ```
+2. **Create a Free Account on [Render.com](https://render.com)** (Sign in with your GitHub account).
+3. Click **New +** &rarr; **Blueprint** (or **Web Service**).
+4. Select your **`Opticare-v2`** repository.
+5. Render will automatically read `render.yaml` and configure:
+   - **Runtime**: Node.js
+   - **Build Command**: `npm install`
+   - **Start Command**: `node app.js`
+   - **Environment Variables**: Automatically injected from `render.yaml`.
+6. Click **Apply / Create Web Service**.
+7. In ~60 seconds, your live eye clinic system will be accessible worldwide on a free HTTPS URL (e.g. `https://opticare-clinic.onrender.com`)!
+
+---
+
 ## 📁 Project Directory Structure
 
 ```text
 Opticare-v2/
 ├── app.js               # Express application entry point & routing engine
 ├── db.js                # SQLite database initialization & schema migrations
+├── render.yaml          # Render.com 1-click cloud deployment blueprint
+├── Dockerfile           # Multi-stage production container specification
 ├── seed-ghana.js        # Realistic Ghanaian clinical & financial demo seeder
 ├── create-user.js       # CLI utility for provisioning staff accounts
 ├── package.json         # Project dependencies and npm scripts
@@ -211,8 +238,10 @@ Opticare-v2/
     │   └── sidebar.ejs  # Role-aware navigation sidebar
     ├── home.ejs         # Patient directory & intake registration
     ├── dashboard.ejs    # Executive analytics, cashier desk, & live triage
+    ├── appointments.ejs # Unified Appointments, Reviews & Cal.com calendar
     ├── patient.ejs      # 5-Tab Patient Clinical Profile (Exam, Billing, SMS, Files, History)
-    ├── queue.ejs        # Live Waiting Queue & Consulting Room dispatch
+    ├── queue.ejs        # Multi-Doctor Live Waiting Queue & room dispatch
+    ├── staff.ejs        # Admin Staff & Doctor Credentials management portal
     ├── inventory.ejs    # Dispensary catalog, stock steppers, & expiry tracking
     ├── report.ejs       # Monthly practice analytics & financial performance report
     ├── referral.ejs     # Medical referral form

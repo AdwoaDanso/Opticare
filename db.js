@@ -257,7 +257,8 @@ db.exec(`
 // Multi-Doctor & Staff Login Enhancements
 try { db.exec('ALTER TABLE users ADD COLUMN name TEXT'); } catch (err) {}
 try { db.exec('ALTER TABLE users ADD COLUMN room TEXT'); } catch (err) {}
-try { db.exec('ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP'); } catch (err) {}
+try { db.exec('ALTER TABLE users ADD COLUMN created_at TEXT'); } catch (err) {}
+try { db.exec("UPDATE users SET created_at = datetime('now') WHERE created_at IS NULL"); } catch (err) {}
 try { db.exec('ALTER TABLE queue_entries ADD COLUMN doctor_name TEXT'); } catch (err) {}
 try { db.exec('ALTER TABLE queue_entries ADD COLUMN visit_reason TEXT'); } catch (err) {}
 
@@ -265,7 +266,8 @@ try { db.exec('ALTER TABLE queue_entries ADD COLUMN visit_reason TEXT'); } catch
 try { db.exec("ALTER TABLE reminders ADD COLUMN appointment_time TEXT DEFAULT '09:00'"); } catch (err) {}
 try { db.exec('ALTER TABLE reminders ADD COLUMN doctor_name TEXT'); } catch (err) {}
 try { db.exec("ALTER TABLE reminders ADD COLUMN appointment_type TEXT DEFAULT 'Clinical Review'"); } catch (err) {}
-try { db.exec('ALTER TABLE reminders ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP'); } catch (err) {}
+try { db.exec('ALTER TABLE reminders ADD COLUMN created_at TEXT'); } catch (err) {}
+try { db.exec("UPDATE reminders SET created_at = datetime('now') WHERE created_at IS NULL"); } catch (err) {}
 
 // Set initial names and rooms on default users if empty
 try {
@@ -279,6 +281,42 @@ const existingFee = db.prepare("SELECT value FROM settings WHERE key = 'consulta
 if (!existingFee) {
   db.prepare("INSERT INTO settings (key, value) VALUES ('consultation_fee', '150.00')").run();
 }
+
+// Seed initial examinations if empty so dashboard charts display immediately
+try {
+  const examCount = db.prepare('SELECT COUNT(*) AS count FROM examinations').get().count;
+  if (examCount === 0) {
+    const iexam = db.prepare(`
+      INSERT INTO examinations(
+        patient_id, chief_complaint, visual_acuity_right, visual_acuity_left,
+        refraction_sphere_right, refraction_cyl_right, refraction_axis_right,
+        refraction_sphere_left, refraction_cyl_left, refraction_axis_left,
+        eye_pressure_right, eye_pressure_left, diagnosis, icd10_code, management_plan, exam_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const initialExams = [
+      [1, 'Blurry distance vision when sewing', '6/18', '6/24', '-1.50', '-0.50', 90, '-1.75', '-0.75', 85, 14, 15, 'Compound Myopic Astigmatism', 'H52.13', 'Prescribed single vision corrective glasses.', '2026-03-08 09:30:00'],
+      [2, 'Gradual reduction in vision and floaters', '6/24', '6/36', '+0.50', '-1.00', 180, '+0.75', '-1.25', 175, 18, 19, 'Nonproliferative Diabetic Retinopathy', 'E11.319', 'Referral sent to tertiary clinic. Glycaemic control.', '2026-03-14 10:45:00'],
+      [3, 'Severe eye strain after computer work', '6/6', '6/6', '+0.50', '-0.25', 90, '+0.50', '-0.25', 90, 13, 13, 'Asthenopia / Eye Strain', 'H53.149', 'Prescribed blue-light filtering spectacle lenses.', '2026-04-22 11:20:00'],
+      [4, 'Routine glaucoma review and IOP test', '6/9', '6/12', '+1.00', '0.00', 0, '+1.25', '0.00', 0, 22, 24, 'Primary Open-Angle Glaucoma', 'H40.113', 'Continue Latanoprost 0.005% nocte. Review in 6 months.', '2026-04-29 08:55:00'],
+      [5, 'Blurry blackboard vision in school', '6/36', '6/24', '-2.25', '-0.75', 10, '-2.00', '-0.50', 170, 14, 15, 'Myopia, Bilateral', 'H52.13', 'Prescribed full-time spectacle wear.', '2026-05-05 13:40:00'],
+      [6, 'Redness and discharge in right eye', '6/6', '6/6', '0.00', '0.00', 0, '0.00', '0.00', 0, 15, 15, 'Acute Conjunctivitis', 'H10.9', 'Prescribed Ciprofloxacin 0.3% Eye Drops.', '2026-05-11 09:15:00'],
+      [7, 'Severe clouding of vision, cannot see clearly', 'CF 1m', '6/60', '0.00', '0.00', 0, '0.00', '0.00', 0, 14, 13, 'Age-Related Cataract, Bilateral', 'H25.9', 'Referred for cataract extraction surgery.', '2026-06-18 08:45:00'],
+      [8, 'Burning, itching, and dry sensation', '6/6', '6/6', '0.00', '0.00', 0, '0.00', '0.00', 0, 14, 14, 'Dry Eye Syndrome, Bilateral', 'H04.123', 'Prescribed Artificial Tears CMC 0.5% QDS.', '2026-06-25 14:15:00'],
+      [9, 'Itchy red eyes during dusty weather', '6/6', '6/6', '0.00', '0.00', 0, '0.00', '0.00', 0, 15, 16, 'Allergic Conjunctivitis', 'H10.9', 'Prescribed Olopatadine 0.1% eye drops BD.', '2026-07-03 10:30:00'],
+      [11, 'Difficulty reading near text', '6/6', '6/6', '0.00', '0.00', 0, '0.00', '0.00', 0, 14, 15, 'Presbyopia', 'H52.4', 'Prescribed +2.00 DS near reading glasses.', '2026-07-17 11:45:00'],
+      [14, 'Blurry night driving and glare', '6/12', '6/18', '-0.75', '-1.00', 95, '-1.00', '-1.25', 85, 16, 17, 'Regular Astigmatism, Bilateral', 'H52.223', 'Prescribed anti-reflective night driving lenses.', '2026-07-07 09:15:00'],
+      [18, 'Ocular throbbing and halo around lights', '6/9', '6/9', '+0.75', '0.00', 0, '+0.75', '0.00', 0, 21, 22, 'Primary Open-Angle Glaucoma', 'H40.113', 'Advised baseline HVF 24-2 and OCT RNFL scan.', '2026-08-05 10:00:00'],
+      [20, 'Follow-up for chronic open angle glaucoma', '6/12', '6/12', '+1.25', '-0.50', 180, '+1.50', '-0.50', 180, 16, 16, 'Primary Open-Angle Glaucoma', 'H40.113', 'IOP well controlled on Timolol & Latanoprost.', '2026-08-19 08:45:00'],
+      [23, 'Severe sandy feeling and grittiness', '6/6', '6/9', '0.00', '-0.50', 90, '0.00', '-0.50', 90, 15, 14, 'Dry Eye Syndrome, Bilateral', 'H04.123', 'Prescribed lubricating drops QDS.', '2026-08-22 10:15:00'],
+      [27, 'Distance blur and eye fatigue', '6/18', '6/18', '-1.25', '0.00', 0, '-1.25', '0.00', 0, 14, 14, 'Myopia, Bilateral', 'H52.13', 'Prescribed single-vision distance glasses.', '2026-08-21 10:00:00'],
+      [30, 'Small print blur when reading Bible', '6/6', '6/6', '0.00', '0.00', 0, '0.00', '0.00', 0, 15, 15, 'Presbyopia', 'H52.4', 'Prescribed +1.75 DS near reading glasses.', '2026-08-22 11:15:00']
+    ];
+
+    initialExams.forEach(e => iexam.run(...e));
+  }
+} catch (err) {}
 
 db.exec("UPDATE patients SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL");
 
