@@ -1229,19 +1229,7 @@ app.post('/inventory/:id/delete', requireLogin, requireRole('admin', 'receptioni
   res.redirect('/inventory');
 });
 
-// ===== Settings (Admin only) =====
 
-app.get('/settings', requireLogin, requireRole('admin'), (req, res) => {
-  const feeSetting = db.prepare("SELECT value FROM settings WHERE key = 'consultation_fee'").get();
-  const consultationFee = feeSetting ? feeSetting.value : '150.00';
-  res.render('settings', { consultationFee: consultationFee });
-});
-
-app.post('/settings', requireLogin, requireRole('admin'), (req, res) => {
-  const fee = parseFloat(req.body.consultation_fee) || 150.00;
-  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('consultation_fee', ?)").run(fee.toFixed(2));
-  res.redirect('/settings');
-});
 
 
 
