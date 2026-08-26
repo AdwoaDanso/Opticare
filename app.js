@@ -1895,8 +1895,29 @@ app.post('/api/ai/clinical-assist', requireLogin, requireRole('admin', 'doctor')
     } catch (e) {}
   }
 
+  let alleAiModel = process.env.ALLE_AI_MODEL;
+  if (!alleAiModel) {
+    try {
+      alleAiModel = db.prepare("SELECT value FROM settings WHERE key = 'alle_ai_model'").get()?.value;
+    } catch (e) {}
+  }
+  const MODEL = alleAiModel || 'gemini-3-5-flash';
+
   if (alleAiApiKey) {
-    const MODEL = process.env.ALLE_AI_MODEL || 'gemini-2-5-flash-lite';
+    const fullPrompt = `You are an advanced clinical optometry decision support AI for OptiCare Eye Clinic.
+Analyze the following optometric examination findings and return STRICTLY a valid JSON object with no markdown fences, matching this schema:
+{
+  "primaryDiagnosis": "string",
+  "icd10Code": "string",
+  "differentialDiagnoses": ["string"],
+  "managementPlan": "string",
+  "patientCareAdvice": "string",
+  "followUpWeeks": 4
+}
+
+Patient Examination Findings:
+${clinicalContext}`;
+
     try {
       const response = await fetch('https://api.alle-ai.com/api/v1/chat/completions', {
         method: 'POST',
@@ -1909,21 +1930,17 @@ app.post('/api/ai/clinical-assist', requireLogin, requireRole('admin', 'doctor')
           models: [MODEL],
           messages: [
             {
-              system: {
-                type: 'text',
-                text: 'You are an advanced clinical optometry decision support AI for OptiCare Eye Clinic. Analyze optometric findings and return STRICTLY a valid JSON object with no markdown fences. Schema: {"primaryDiagnosis": "string", "icd10Code": "string", "differentialDiagnoses": ["string"], "managementPlan": "string", "patientCareAdvice": "string", "followUpWeeks": 4}'
-              },
               user: [
                 {
                   type: 'text',
-                  text: clinicalContext
+                  text: fullPrompt
                 }
               ]
             }
           ],
           response_format: { type: 'text' },
           temperature: 0.2,
-          max_tokens: 2000,
+          max_tokens: 1500,
           stream: false
         })
       });
@@ -1940,6 +1957,7 @@ app.post('/api/ai/clinical-assist', requireLogin, requireRole('admin', 'doctor')
 
       const raw =
         data?.responses?.responses?.[MODEL]?.message?.content ??
+        data?.responses?.responses?.['gemini-3-5-flash']?.message?.content ??
         data?.responses?.responses?.['gemini-2-5-flash-lite']?.message?.content;
 
       if (!raw) {
@@ -1958,7 +1976,7 @@ app.post('/api/ai/clinical-assist', requireLogin, requireRole('admin', 'doctor')
 
       return res.json({
         success: true,
-        source: `Alle-AI Multi-Model Engine (${MODEL})`,
+        source: `Alle-AI (${MODEL})`,
         model: MODEL,
         data: result
       });

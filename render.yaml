@@ -28,4 +28,4 @@ services:
       - key: ALLE_AI_API_KEY
         sync: false
       - key: ALLE_AI_MODEL
-        value: gemini-2-5-flash-lite
+        value: gemini-3-5-flash
