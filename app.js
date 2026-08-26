@@ -195,7 +195,10 @@ app.get('/dashboard', requireLogin, (req, res) => {
   let waitingQueue = [];
   if (role === 'doctor' || role === 'admin') {
     waitingQueue = db.prepare(`
-      SELECT queue_entries.*, patients.full_name
+      SELECT queue_entries.*, patients.full_name, patients.phone,
+             (SELECT appointment_time FROM reminders WHERE reminders.patient_id = patients.id AND reminders.status IN ('pending', 'checked_in', 'sent') AND DATE(reminders.due_date) <= DATE('now', '+1 day') ORDER BY reminders.due_date DESC LIMIT 1) AS appt_time,
+             (SELECT appointment_type FROM reminders WHERE reminders.patient_id = patients.id AND reminders.status IN ('pending', 'checked_in', 'sent') AND DATE(reminders.due_date) <= DATE('now', '+1 day') ORDER BY reminders.due_date DESC LIMIT 1) AS appt_type,
+             (SELECT doctor_name FROM reminders WHERE reminders.patient_id = patients.id AND reminders.status IN ('pending', 'checked_in', 'sent') AND DATE(reminders.due_date) <= DATE('now', '+1 day') ORDER BY reminders.due_date DESC LIMIT 1) AS appt_doctor
       FROM queue_entries JOIN patients ON patients.id = queue_entries.patient_id
       WHERE queue_entries.status = 'waiting'
       ORDER BY queue_entries.checked_in_at ASC
@@ -691,8 +694,8 @@ app.post('/patients/:id/exams', requireLogin, requireRole('admin', 'doctor'), (r
     db.prepare("INSERT INTO queue_entries (patient_id, status) VALUES (?, 'ready_for_billing')").run(patientId);
   }
 
-  // Redirect to Live Queue so doctor can attend to the next patient immediately
-  res.redirect('/queue?finalised=1&name=' + encodeURIComponent(patient ? patient.full_name : 'Patient') + '&id=' + patientId);
+  // Automatically open the Appointments scheduling page so doctor can select the review date/time
+  res.redirect('/appointments?book_for=' + patientId + '&name=' + encodeURIComponent(patient ? patient.full_name : 'Patient') + '&phone=' + encodeURIComponent(patient ? (patient.phone || '') : '') + '&finalised=1');
 });
 
 
@@ -1245,9 +1248,16 @@ app.post('/queue/checkin/:patientId', requireLogin, (req, res) => {
 app.get('/queue', requireLogin, (req, res) => {
   const finalisedName = req.query.name || null;
   const finalisedId = req.query.id || null;
+  const reviewBooked = req.query.review_booked === '1';
+  const reviewName = req.query.name || '';
+  const reviewDate = req.query.date || '';
+  const reviewTime = req.query.time || '';
 
   const waiting = db.prepare(`
-    SELECT queue_entries.*, patients.full_name, patients.phone
+    SELECT queue_entries.*, patients.full_name, patients.phone,
+           (SELECT appointment_time FROM reminders WHERE reminders.patient_id = patients.id AND reminders.status IN ('pending', 'checked_in', 'sent') AND DATE(reminders.due_date) <= DATE('now', '+1 day') ORDER BY reminders.due_date DESC LIMIT 1) AS appt_time,
+           (SELECT appointment_type FROM reminders WHERE reminders.patient_id = patients.id AND reminders.status IN ('pending', 'checked_in', 'sent') AND DATE(reminders.due_date) <= DATE('now', '+1 day') ORDER BY reminders.due_date DESC LIMIT 1) AS appt_type,
+           (SELECT doctor_name FROM reminders WHERE reminders.patient_id = patients.id AND reminders.status IN ('pending', 'checked_in', 'sent') AND DATE(reminders.due_date) <= DATE('now', '+1 day') ORDER BY reminders.due_date DESC LIMIT 1) AS appt_doctor
     FROM queue_entries
     JOIN patients ON patients.id = queue_entries.patient_id
     WHERE queue_entries.status = 'waiting'
@@ -1255,7 +1265,10 @@ app.get('/queue', requireLogin, (req, res) => {
   `).all();
 
   const inConsultation = db.prepare(`
-    SELECT queue_entries.*, patients.full_name, patients.phone
+    SELECT queue_entries.*, patients.full_name, patients.phone,
+           (SELECT appointment_time FROM reminders WHERE reminders.patient_id = patients.id AND reminders.status IN ('pending', 'checked_in', 'sent') AND DATE(reminders.due_date) <= DATE('now', '+1 day') ORDER BY reminders.due_date DESC LIMIT 1) AS appt_time,
+           (SELECT appointment_type FROM reminders WHERE reminders.patient_id = patients.id AND reminders.status IN ('pending', 'checked_in', 'sent') AND DATE(reminders.due_date) <= DATE('now', '+1 day') ORDER BY reminders.due_date DESC LIMIT 1) AS appt_type,
+           (SELECT doctor_name FROM reminders WHERE reminders.patient_id = patients.id AND reminders.status IN ('pending', 'checked_in', 'sent') AND DATE(reminders.due_date) <= DATE('now', '+1 day') ORDER BY reminders.due_date DESC LIMIT 1) AS appt_doctor
     FROM queue_entries
     JOIN patients ON patients.id = queue_entries.patient_id
     WHERE queue_entries.status = 'in_progress'
@@ -1277,7 +1290,11 @@ app.get('/queue', requireLogin, (req, res) => {
     inConsultation: inConsultation, 
     readyForBilling: readyForBilling,
     finalisedName: finalisedName,
-    finalisedId: finalisedId
+    finalisedId: finalisedId,
+    reviewBooked: reviewBooked,
+    reviewName: reviewName,
+    reviewDate: reviewDate,
+    reviewTime: reviewTime
   });
 });
 
@@ -1758,6 +1775,11 @@ app.get('/appointments', requireLogin, async (req, res) => {
     }
   }
 
+  const bookForId = req.query.book_for ? parseInt(req.query.book_for) : null;
+  const bookForName = req.query.name || '';
+  const bookForPhone = req.query.phone || '';
+  const isFinalised = req.query.finalised === '1';
+
   res.render('appointments', {
     todayAppointments: todayAppointments,
     upcomingAppointments: upcomingAppointments,
@@ -1766,13 +1788,17 @@ app.get('/appointments', requireLogin, async (req, res) => {
     doctorsList: doctorsList,
     patientsList: patientsList,
     calBookings: calBookings,
-    todayStr: todayStr
+    todayStr: todayStr,
+    bookForId: bookForId,
+    bookForName: bookForName,
+    bookForPhone: bookForPhone,
+    isFinalised: isFinalised
   });
 });
 
 // Book New Appointment / Follow-up Review
 app.post('/appointments', requireLogin, (req, res) => {
-  const { patient_id, due_date, appointment_time, doctor_name, appointment_type, note, send_sms } = req.body;
+  const { patient_id, due_date, appointment_time, doctor_name, appointment_type, note, send_sms, return_to_queue } = req.body;
 
   if (!patient_id || !due_date) {
     return res.redirect('/appointments?error=missing_fields');
@@ -1794,6 +1820,11 @@ app.post('/appointments', requireLogin, (req, res) => {
     const formattedDate = new Date(due_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
     const smsBody = `Hello ${firstName}, your eye review appointment at OptiCare Eye Clinic has been scheduled for ${formattedDate} at ${timeVal} with ${docVal}. Purpose: ${typeVal}. Please arrive 10 mins early.`;
     dispatchSMS(patient.id, patient.phone, smsBody);
+  }
+
+  // If booked right after finalizing examination, return to Live Queue with success alert
+  if (return_to_queue === '1') {
+    return res.redirect('/queue?review_booked=1&name=' + encodeURIComponent(patient ? patient.full_name : 'Patient') + '&date=' + encodeURIComponent(due_date) + '&time=' + encodeURIComponent(timeVal));
   }
 
   // If booked from patient chart, return there; otherwise return to appointments hub

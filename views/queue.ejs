@@ -16,8 +16,23 @@
       <a href="/" class="btn btn-secondary">&larr; Back to Patients Directory</a>
     </div>
 
+    <!-- Review Appointment Booked Confirmation Alert -->
+    <% if (typeof reviewBooked !== 'undefined' && reviewBooked) { %>
+      <div class="card" style="background:#F0FDF4; border:1px solid #BBF7D0; border-left:4px solid #166534; padding:16px 20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <div style="font-size:14.5px; font-weight:700; color:#166534; display:flex; align-items:center; gap:8px;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#166534" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            ✓ Clinical Review Scheduled for <%= reviewName %>!
+          </div>
+          <div style="font-size:13px; color:#14532D; margin-top:2px;">
+            Date: <strong><%= reviewDate %></strong> at <strong><%= reviewTime %></strong> · Automated SMS confirmation dispatched to patient's phone.
+          </div>
+        </div>
+      </div>
+    <% } %>
+
     <!-- Finalised Examination Confirmation Alert -->
-    <% if (typeof finalisedName !== 'undefined' && finalisedName) { %>
+    <% if (typeof finalisedName !== 'undefined' && finalisedName && !(typeof reviewBooked !== 'undefined' && reviewBooked)) { %>
       <div class="card" style="background:#F0FDF4; border:1px solid #BBF7D0; border-left:4px solid #166534; padding:16px 20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
         <div>
           <div style="font-size:14.5px; font-weight:700; color:#166534; display:flex; align-items:center; gap:8px;">
@@ -102,9 +117,17 @@
         <div class="empty-state">No one is currently inside a consultation room.</div>
       <% } else { %>
         <% inConsultation.forEach(function(entry) { %>
-          <div class="list-row">
+          <div class="list-row" style="align-items:center;">
             <div>
-              <div class="name"><a href="/patients/<%= entry.patient_id %>" style="font-weight:700;"><%= entry.full_name %></a></div>
+              <div class="name" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <a href="/patients/<%= entry.patient_id %>" style="font-weight:700;"><%= entry.full_name %></a>
+                <% if (entry.appt_time) { %>
+                  <span class="badge" style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; font-weight:700; font-size:11px; padding:2px 7px; display:inline-flex; align-items:center; gap:4px;">
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    📅 Scheduled Appt: <%= entry.appt_time %> (<%= entry.appt_type || 'Review' %>)
+                  </span>
+                <% } %>
+              </div>
               <div class="meta"><%= entry.room || 'Consultation Room' %> <%= entry.doctor_name ? '· Attending: ' + entry.doctor_name : '' %> | <a href="/patients/<%= entry.patient_id %>">Open Patient Clinical Chart &rarr;</a></div>
             </div>
             <form action="/queue/<%= entry.id %>/complete" method="POST" style="margin:0;">
@@ -124,8 +147,23 @@
         <% waiting.forEach(function(entry) { %>
           <div class="list-row" style="align-items:center;">
             <div>
-              <div class="name"><a href="/patients/<%= entry.patient_id %>" style="font-weight:700;"><%= entry.full_name %></a></div>
-              <div class="meta">Checked in at: <%= entry.checked_in_at %></div>
+              <div class="name" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <a href="/patients/<%= entry.patient_id %>" style="font-weight:700;"><%= entry.full_name %></a>
+                <% if (entry.appt_time) { %>
+                  <span class="badge" style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; font-weight:700; font-size:11.5px; padding:3px 8px; display:inline-flex; align-items:center; gap:5px;">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    📅 Scheduled Appt: <%= entry.appt_time %> (<%= entry.appt_type || 'Review' %>)
+                  </span>
+                <% } else { %>
+                  <span class="badge" style="background:#F1F5F9; color:#475569; border:1px solid #E2E8F0; font-size:10.5px; padding:2px 6px;">
+                    Walk-in Patient
+                  </span>
+                <% } %>
+              </div>
+              <div class="meta" style="margin-top:3px;">
+                Checked in at: <%= entry.checked_in_at %>
+                <% if (entry.visit_reason) { %> · Reason: <em><%= entry.visit_reason %></em><% } %>
+              </div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
               <span class="badge badge-danger">WAITING</span>

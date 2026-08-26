@@ -163,10 +163,22 @@
           <div class="empty-state">No one is currently waiting.</div>
         <% } else { %>
           <% waitingQueue.forEach(function(entry) { %>
-            <div class="list-row">
+            <div class="list-row" style="align-items:center;">
               <div>
-                <div class="name"><a href="/patients/<%= entry.patient_id %>" style="font-weight:700;"><%= entry.full_name %></a></div>
-                <div class="meta">Checked in: <%= entry.checked_in_at %></div>
+                <div class="name" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <a href="/patients/<%= entry.patient_id %>" style="font-weight:700;"><%= entry.full_name %></a>
+                  <% if (entry.appt_time) { %>
+                    <span class="badge" style="background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; font-weight:700; font-size:11px; padding:2px 7px; display:inline-flex; align-items:center; gap:4px;">
+                      <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      📅 Appt: <%= entry.appt_time %> (<%= entry.appt_type || 'Review' %>)
+                    </span>
+                  <% } else { %>
+                    <span class="badge" style="background:#F1F5F9; color:#475569; border:1px solid #E2E8F0; font-size:10px; padding:1px 5px;">
+                      Walk-in
+                    </span>
+                  <% } %>
+                </div>
+                <div class="meta" style="margin-top:2px;">Checked in: <%= entry.checked_in_at %></div>
               </div>
               <form action="/queue/<%= entry.id %>/call" method="POST" style="display:flex; gap:8px; align-items:center;">
                 <select name="room" style="padding:6px 8px; border-radius:8px; border:1px solid var(--border); font-size:12px; font-weight:600;">

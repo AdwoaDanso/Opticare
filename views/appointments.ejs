@@ -84,9 +84,102 @@
           <svg class="svg-icon sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           + Book New Appointment / Review
         </button>
-        <a href="/dashboard" class="btn btn-secondary">&larr; Dashboard</a>
+        <a href="/queue" class="btn btn-secondary">&larr; Live Queue</a>
       </div>
     </div>
+
+    <!-- 1. Post-Examination Dedicated Follow-up Scheduling Section -->
+    <% if (typeof bookForId !== 'undefined' && bookForId) { %>
+      <% 
+        // Calculate default follow-up date (+2 weeks from today)
+        const d = new Date();
+        d.setDate(d.getDate() + 14);
+        const defaultReviewDate = d.toISOString().split('T')[0];
+      %>
+      <div class="card" style="background:#F0FDF4; border:1px solid #BBF7D0; border-left:4px solid #166534; padding:20px; margin-bottom:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+          <div>
+            <div style="display:inline-flex; align-items:center; gap:6px; background:#DCFCE7; color:#166534; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+              ✓ Examination Finalised &amp; Discharged to Billing
+            </div>
+            <h2 style="margin:0; color:#0B3D2E; font-size:1.3rem;">
+              📅 Schedule Clinical Review for <%= bookForName %> (Patient #<%= bookForId %>)
+            </h2>
+            <div style="font-size:13px; color:#166534; margin-top:3px;">
+              Select the review appointment date and time below. OptiCare will automatically dispatch a reminder SMS to <strong><%= bookForPhone || 'the patient' %></strong>.
+            </div>
+          </div>
+          <div>
+            <a href="/queue?finalised=1&name=<%= encodeURIComponent(bookForName) %>&id=<%= bookForId %>" class="btn btn-sm btn-secondary" style="background:#fff;">
+              Skip &amp; Go Directly to Queue &rarr;
+            </a>
+          </div>
+        </div>
+
+        <form action="/appointments" method="POST" style="background:#fff; border:1px solid #DCFCE7; border-radius:10px; padding:16px; margin-top:10px;">
+          <input type="hidden" name="patient_id" value="<%= bookForId %>" />
+          <input type="hidden" name="return_to_queue" value="1" />
+
+          <div class="grid-3" style="margin-bottom:12px;">
+            <div class="form-group">
+              <label style="font-size:12px; font-weight:600;">Review Date</label>
+              <input type="date" name="due_date" value="<%= defaultReviewDate %>" required style="padding:9px 12px; border-radius:8px; border:1px solid var(--border); width:100%; font-weight:700;" />
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:12px; font-weight:600;">Review Time</label>
+              <input type="time" name="appointment_time" value="10:00" required style="padding:9px 12px; border-radius:8px; border:1px solid var(--border); width:100%; font-weight:700;" />
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:12px; font-weight:600;">Appointment Category / Purpose</label>
+              <select name="appointment_type" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); font-size:12.5px; font-weight:600;">
+                <option value="Post-Exam Clinical Review" selected>Post-Exam Clinical Review (2 Weeks)</option>
+                <option value="6-Month IOP &amp; Glaucoma Review">6-Month IOP &amp; Glaucoma Review</option>
+                <option value="Spectacle / Lens Fitting &amp; Collection">Spectacle / Lens Fitting &amp; Collection</option>
+                <option value="Allergic Conjunctivitis Review">Allergic Conjunctivitis Review</option>
+                <option value="Post-Mydriatic Refraction Review">Post-Mydriatic Refraction Review</option>
+                <option value="Diabetic Retinopathy Screening">Diabetic Retinopathy Screening</option>
+                <option value="General Follow-up Consultation">General Follow-up Consultation</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-bottom:14px;">
+            <div class="form-group">
+              <label style="font-size:12px; font-weight:600;">Attending Doctor / Room</label>
+              <select name="doctor_name" required style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); font-size:12.5px;">
+                <% (doctorsList || []).forEach(function(d) { %>
+                  <option value="<%= d.name || d.email %>" <%= (currentUser && (currentUser.name === d.name || currentUser.email === d.email)) ? 'selected' : '' %>>
+                    <%= d.name || d.email %> (<%= d.room || 'Consultation Room' %>)
+                  </option>
+                <% }); %>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:12px; font-weight:600;">Instructions for Patient (Included in SMS)</label>
+              <input type="text" name="note" placeholder="e.g. Bring eye drops and new spectacles for follow-up evaluation" style="padding:9px 12px; border-radius:8px; border:1px solid var(--border); width:100%; font-size:12.5px;" />
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #F1F5F9; padding-top:12px;">
+            <label style="display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:#166534; cursor:pointer;">
+              <input type="checkbox" name="send_sms" value="1" checked style="width:16px; height:16px;" />
+              Send automated SMS confirmation to patient phone (<%= bookForPhone || 'on file' %>)
+            </label>
+            <div style="display:flex; gap:10px;">
+              <a href="/queue?finalised=1&name=<%= encodeURIComponent(bookForName) %>&id=<%= bookForId %>" class="btn btn-secondary" style="padding:8px 16px;">
+                Skip Follow-Up
+              </a>
+              <button type="submit" class="btn" style="background:#166534; font-weight:700; padding:8px 20px;">
+                ✓ Confirm Review Appointment &amp; Return to Queue &rarr;
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    <% } %>
 
     <!-- Alert Banner when Booked / Checked In -->
     <script>
