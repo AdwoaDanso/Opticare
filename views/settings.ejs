@@ -239,6 +239,37 @@
           </form>
         </div>
 
+        <!-- 5. Alle-AI Multi-Model Clinical Intelligence (CDSS) -->
+        <div class="card" style="border-left:4px solid #8B5CF6;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h2 style="margin:0; color:#0B3D2E; font-size:1.15rem;">5. Alle-AI Clinical Decision Support</h2>
+            <span class="badge badge-success" style="background:#EDE9FE; color:#7C3AED; font-weight:700;">Multi-Model AI</span>
+          </div>
+          <div style="font-size:12.5px; color:#64748B; margin-bottom:14px;">
+            Powers the real-time AI Clinical Copilot with diagnostic ICD-10 suggestions, differentials, and management plans via Alle-AI's unified API.
+          </div>
+
+          <form action="/settings" method="POST">
+            <div class="form-group" style="margin-bottom:12px;">
+              <label style="font-size:12px; font-weight:600;">Alle-AI API Key (<code style="color:#7C3AED;">X-API-KEY</code>)</label>
+              <input type="password" name="alle_ai_api_key" value="<%= (typeof clinicSettings !== 'undefined' && clinicSettings.alle_ai_api_key) ? clinicSettings.alle_ai_api_key : '' %>" placeholder="Enter your Alle-AI API Key from alle-ai.com/developer" style="font-family:monospace; font-size:12px;" />
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+              <label style="font-size:12px; font-weight:600;">Active AI Model</label>
+              <select name="alle_ai_model" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); font-size:12.5px;">
+                <option value="gemini-2-5-flash-lite" <%= (typeof clinicSettings !== 'undefined' && clinicSettings.alle_ai_model === 'gemini-2-5-flash-lite') ? 'selected' : '' %>>Gemini 2.5 Flash Lite (Recommended · Fast &amp; Cost-Effective)</option>
+                <option value="claude-3-5-sonnet" <%= (typeof clinicSettings !== 'undefined' && clinicSettings.alle_ai_model === 'claude-3-5-sonnet') ? 'selected' : '' %>>Claude 3.5 Sonnet (High Accuracy)</option>
+                <option value="gpt-4o" <%= (typeof clinicSettings !== 'undefined' && clinicSettings.alle_ai_model === 'gpt-4o') ? 'selected' : '' %>>GPT-4o (Frontier Model)</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-sm" style="background:#7C3AED; color:#fff; font-weight:700; padding:8px 18px;">
+              Save Alle-AI Settings
+            </button>
+          </form>
+        </div>
+
       </div>
 
       <!-- RIGHT COLUMN: FULL STAFF & DOCTOR LOGINS MANAGEMENT -->

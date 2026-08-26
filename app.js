@@ -1648,18 +1648,28 @@ app.post('/settings', requireLogin, requireRole('admin'), (req, res) => {
     clinic_phone,
     clinic_email,
     clinic_address,
-    clinic_reg_number
+    clinic_reg_number,
+    paystack_secret_key,
+    paystack_public_key,
+    alle_ai_api_key,
+    alle_ai_model,
+    openai_api_key
   } = req.body;
 
   const setStmt = db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value");
 
   if (consultation_fee) setStmt.run('consultation_fee', parseFloat(consultation_fee).toFixed(2));
   if (clinic_name) setStmt.run('clinic_name', clinic_name.trim());
-  if (clinic_tagline) setStmt.run('clinic_tagline', clinic_tagline.trim());
-  if (clinic_phone) setStmt.run('clinic_phone', clinic_phone.trim());
-  if (clinic_email) setStmt.run('clinic_email', clinic_email.trim());
-  if (clinic_address) setStmt.run('clinic_address', clinic_address.trim());
-  if (clinic_reg_number) setStmt.run('clinic_reg_number', clinic_reg_number.trim());
+  if (clinic_tagline !== undefined) setStmt.run('clinic_tagline', clinic_tagline.trim());
+  if (clinic_phone !== undefined) setStmt.run('clinic_phone', clinic_phone.trim());
+  if (clinic_email !== undefined) setStmt.run('clinic_email', clinic_email.trim());
+  if (clinic_address !== undefined) setStmt.run('clinic_address', clinic_address.trim());
+  if (clinic_reg_number !== undefined) setStmt.run('clinic_reg_number', clinic_reg_number.trim());
+  if (paystack_secret_key !== undefined) setStmt.run('paystack_secret_key', paystack_secret_key.trim());
+  if (paystack_public_key !== undefined) setStmt.run('paystack_public_key', paystack_public_key.trim());
+  if (alle_ai_api_key !== undefined) setStmt.run('alle_ai_api_key', alle_ai_api_key.trim());
+  if (alle_ai_model !== undefined) setStmt.run('alle_ai_model', alle_ai_model.trim());
+  if (openai_api_key !== undefined) setStmt.run('openai_api_key', openai_api_key.trim());
 
   res.redirect('/settings?saved=1');
 });
@@ -1850,7 +1860,7 @@ app.post('/appointments/:id/send-sms', requireLogin, (req, res) => {
   res.redirect('/appointments?reminded=1');
 });
 
-// ===== OpenAI Clinical Diagnostic & Management Assistant =====
+// ===== AI Clinical Diagnostic & Management Assistant (Alle-AI & OpenAI) =====
 
 app.post('/api/ai/clinical-assist', requireLogin, requireRole('admin', 'doctor'), async (req, res) => {
   const {
@@ -1867,17 +1877,101 @@ app.post('/api/ai/clinical-assist', requireLogin, requireRole('admin', 'doctor')
     medicalHistory
   } = req.body;
 
-  const clinicalContext = `
-Patient Age: ${patientAge || 'Adult'}
-Medical/Systemic History: ${medicalHistory || 'None reported'}
-Chief Complaint: ${chiefComplaint || 'Routine vision examination'}
-Visual Acuity Unaided: OD ${vaUnaidedRight || '6/6'}, OS ${vaUnaidedLeft || '6/6'}
-Refraction Rx: OD ${refractionRight || 'Plano'}, OS ${refractionLeft || 'Plano'}
-Intraocular Pressure (IOP): OD ${iopRight || '14'} mmHg, OS ${iopLeft || '14'} mmHg (${iopMethod || 'NCT'})
-Slit Lamp / Biomicroscopy / Ophthalmoscopy Notes: ${biomicroscopyFindings || 'Clear cornea, quiet anterior chamber, normal disc/macula'}
-`.trim();
+  const clinicalContext = [
+    `Patient Age: ${patientAge || 'Adult'}`,
+    `Medical/Systemic History: ${medicalHistory || 'None reported'}`,
+    `Chief Complaint: ${chiefComplaint || 'Routine vision examination'}`,
+    `Visual Acuity Unaided: OD ${vaUnaidedRight || '6/6'}, OS ${vaUnaidedLeft || '6/6'}`,
+    `Refraction Rx: OD ${refractionRight || 'Plano'}, OS ${refractionLeft || 'Plano'}`,
+    `Intraocular Pressure (IOP): OD ${iopRight || '14'} mmHg, OS ${iopLeft || '14'} mmHg (${iopMethod || 'NCT'})`,
+    `Slit Lamp / Biomicroscopy / Ophthalmoscopy Notes: ${biomicroscopyFindings || 'Clear cornea, quiet anterior chamber, normal disc/macula'}`
+  ].join('\n');
 
-  // 1. Fetch OpenAI API Key from env or settings
+  // 1. Check for Alle-AI API Key (Primary Provider)
+  let alleAiApiKey = process.env.ALLE_AI_API_KEY;
+  if (!alleAiApiKey) {
+    try {
+      alleAiApiKey = db.prepare("SELECT value FROM settings WHERE key = 'alle_ai_api_key'").get()?.value;
+    } catch (e) {}
+  }
+
+  if (alleAiApiKey) {
+    const MODEL = process.env.ALLE_AI_MODEL || 'gemini-2-5-flash-lite';
+    try {
+      const response = await fetch('https://api.alle-ai.com/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-API-KEY': alleAiApiKey
+        },
+        body: JSON.stringify({
+          models: [MODEL],
+          messages: [
+            {
+              system: {
+                type: 'text',
+                text: 'You are an advanced clinical optometry decision support AI for OptiCare Eye Clinic. Analyze optometric findings and return STRICTLY a valid JSON object with no markdown fences. Schema: {"primaryDiagnosis": "string", "icd10Code": "string", "differentialDiagnoses": ["string"], "managementPlan": "string", "patientCareAdvice": "string", "followUpWeeks": 4}'
+              },
+              user: [
+                {
+                  type: 'text',
+                  text: clinicalContext
+                }
+              ]
+            }
+          ],
+          response_format: { type: 'text' },
+          temperature: 0.2,
+          max_tokens: 2000,
+          stream: false
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || data?.success === false) {
+        console.warn('[Alle-AI API Error]:', data?.message || response.status);
+        return res.status(502).json({
+          success: false,
+          error: data?.message || `Alle-AI error (${response.status})`
+        });
+      }
+
+      const raw =
+        data?.responses?.responses?.[MODEL]?.message?.content ??
+        data?.responses?.responses?.['gemini-2-5-flash-lite']?.message?.content;
+
+      if (!raw) {
+        return res.status(502).json({
+          success: false,
+          error: 'No model content received from Alle-AI response.'
+        });
+      }
+
+      const cleaned = String(raw)
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+
+      const result = JSON.parse(cleaned);
+
+      return res.json({
+        success: true,
+        source: `Alle-AI Multi-Model Engine (${MODEL})`,
+        model: MODEL,
+        data: result
+      });
+    } catch (alleErr) {
+      console.error('[Alle-AI Gateway Error]:', alleErr.message);
+      return res.status(502).json({
+        success: false,
+        error: 'Alle-AI Gateway connection error: ' + alleErr.message
+      });
+    }
+  }
+
+  // 2. Secondary Provider: OpenAI Direct Fallback
   let openAiApiKey = process.env.OPENAI_API_KEY;
   if (!openAiApiKey) {
     try {
@@ -1885,69 +1979,69 @@ Slit Lamp / Biomicroscopy / Ophthalmoscopy Notes: ${biomicroscopyFindings || 'Cl
     } catch (e) {}
   }
 
-  if (!openAiApiKey) {
-    return res.json({
-      success: false,
-      error: 'OpenAI API key is not configured. Please configure an active OpenAI key in Settings to use the AI Copilot.'
-    });
-  }
+  if (openAiApiKey) {
+    try {
+      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + openAiApiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an advanced clinical optometry decision support AI for OptiCare Eye Clinic. Provide concise, professional, evidence-based differential diagnosis, ICD-10 diagnostic code suggestions, clinical management plan with medications/lifestyle advice, and follow-up timeline based on the examination findings. Return strictly a valid JSON object matching this structure: {"primaryDiagnosis": "...", "icd10Code": "...", "differentialDiagnoses": ["..."], "managementPlan": "...", "patientCareAdvice": "...", "followUpWeeks": 4}'
+            },
+            {
+              role: 'user',
+              content: `Please analyze the following optometric examination findings and generate clinical recommendations:\n\n${clinicalContext}`
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: 600,
+          response_format: { type: 'json_object' }
+        })
+      });
 
-  try {
-    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + openAiApiKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an advanced clinical optometry decision support AI for OptiCare Eye Clinic. Provide concise, professional, evidence-based differential diagnosis, ICD-10 diagnostic code suggestions, clinical management plan with medications/lifestyle advice, and follow-up timeline based on the examination findings. Return strictly a valid JSON object matching this structure: {"primaryDiagnosis": "...", "icd10Code": "...", "differentialDiagnoses": ["..."], "managementPlan": "...", "patientCareAdvice": "...", "followUpWeeks": 4}'
-          },
-          {
-            role: 'user',
-            content: `Please analyze the following optometric examination findings and generate clinical recommendations:\n\n${clinicalContext}`
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: 600,
-        response_format: { type: 'json_object' }
-      })
-    });
+      const data = await aiResponse.json();
 
-    const data = await aiResponse.json();
+      if (data.error) {
+        console.warn('[OpenAI API Error]:', data.error.message);
+        return res.json({
+          success: false,
+          error: data.error.message || 'OpenAI API request failed (insufficient quota or invalid key).'
+        });
+      }
 
-    if (data.error) {
-      console.warn('[OpenAI API Error]:', data.error.message);
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        const parsed = JSON.parse(data.choices[0].message.content);
+        return res.json({
+          success: true,
+          source: 'OpenAI GPT-4o-mini (Live Cloud Intelligence)',
+          data: parsed
+        });
+      }
+
       return res.json({
         success: false,
-        error: data.error.message || 'OpenAI API request failed (insufficient quota or invalid key).'
+        error: 'No clinical response received from OpenAI model.'
       });
-    }
 
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-      const parsed = JSON.parse(data.choices[0].message.content);
+    } catch (aiErr) {
+      console.error('[OpenAI Network Error]:', aiErr.message);
       return res.json({
-        success: true,
-        source: 'OpenAI GPT-4o-mini (Live Cloud Intelligence)',
-        data: parsed
+        success: false,
+        error: 'Network connection to OpenAI failed: ' + aiErr.message
       });
     }
-
-    return res.json({
-      success: false,
-      error: 'No clinical response received from OpenAI model.'
-    });
-
-  } catch (aiErr) {
-    console.error('[OpenAI Network Error]:', aiErr.message);
-    return res.json({
-      success: false,
-      error: 'Network connection to OpenAI failed: ' + aiErr.message
-    });
   }
+
+  return res.json({
+    success: false,
+    error: 'AI Copilot key is not configured. Please add your Alle-AI API Key in Settings to activate the AI Clinical Decision Support system.'
+  });
 });
 
 // ===== Misc =====
