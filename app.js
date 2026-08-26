@@ -689,7 +689,8 @@ app.post('/patients/:id/exams', requireLogin, requireRole('admin', 'doctor'), (r
     db.prepare("INSERT INTO queue_entries (patient_id, status) VALUES (?, 'ready_for_billing')").run(patientId);
   }
 
-  res.redirect('/patients/' + patientId + '?discharged=1&tab=exams');
+  // Redirect to Live Queue so doctor can attend to the next patient immediately
+  res.redirect('/queue?finalised=1&name=' + encodeURIComponent(patient ? patient.full_name : 'Patient') + '&id=' + patientId);
 });
 
 
@@ -1238,6 +1239,9 @@ app.post('/queue/checkin/:patientId', requireLogin, (req, res) => {
 });
 
 app.get('/queue', requireLogin, (req, res) => {
+  const finalisedName = req.query.name || null;
+  const finalisedId = req.query.id || null;
+
   const waiting = db.prepare(`
     SELECT queue_entries.*, patients.full_name, patients.phone
     FROM queue_entries
@@ -1264,7 +1268,13 @@ app.get('/queue', requireLogin, (req, res) => {
     ORDER BY queue_entries.checked_in_at ASC
   `).all();
 
-  res.render('queue', { waiting: waiting, inConsultation: inConsultation, readyForBilling: readyForBilling });
+  res.render('queue', { 
+    waiting: waiting, 
+    inConsultation: inConsultation, 
+    readyForBilling: readyForBilling,
+    finalisedName: finalisedName,
+    finalisedId: finalisedId
+  });
 });
 
 app.post('/queue/:id/complete', requireLogin, (req, res) => {

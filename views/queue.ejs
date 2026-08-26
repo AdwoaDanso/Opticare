@@ -16,6 +16,24 @@
       <a href="/" class="btn btn-secondary">&larr; Back to Patients Directory</a>
     </div>
 
+    <!-- Finalised Examination Confirmation Alert -->
+    <% if (typeof finalisedName !== 'undefined' && finalisedName) { %>
+      <div class="card" style="background:#F0FDF4; border:1px solid #BBF7D0; border-left:4px solid #166534; padding:16px 20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <div style="font-size:14.5px; font-weight:700; color:#166534; display:flex; align-items:center; gap:8px;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#166534" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            ✓ Examination for <%= finalisedName %> Saved &amp; Discharged to Billing!
+          </div>
+          <div style="font-size:13px; color:#14532D; margin-top:2px;">
+            Patient ID: <strong>#<%= finalisedId %></strong> · Patient transferred to Cashier &amp; Pharmacy counter. Ready to attend to the next waiting patient below.
+          </div>
+        </div>
+        <div>
+          <a href="/patients/<%= finalisedId %>" class="btn btn-sm btn-secondary">Review Chart</a>
+        </div>
+      </div>
+    <% } %>
+
     <!-- Section 1: Ready for Payment & Drug Collection (Cashier & Pharmacy) -->
     <div class="card" style="border-left:4px solid #166534; background:#F8FAFC; margin-bottom:20px;">
       <div class="page-header" style="margin-bottom:12px;">
