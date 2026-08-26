@@ -544,6 +544,7 @@ app.get('/referrals/:id', requireLogin, (req, res) => {
 
 app.post('/patients/:id/exams', requireLogin, requireRole('admin', 'doctor'), (req, res) => {
   const patientId = req.params.id;
+  const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(patientId);
 
   const chiefComplaint = req.body.chief_complaint || null;
 
