@@ -446,17 +446,27 @@
           <div id="aiSuggestionBox" style="display:none; background:#F0FDF4; border:1px solid #BBF7D0; border-left:4px solid #166534; border-radius:10px; padding:16px; margin-bottom:18px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
               <div style="display:flex; align-items:center; gap:8px;">
-                <span class="badge badge-success" style="font-size:11px;">OptiCare AI Copilot</span>
-                <span id="aiSourceLabel" style="font-size:12px; color:#166534; font-weight:600;">Analyzing findings...</span>
+                <span id="aiBadge" class="badge badge-success" style="font-size:11px;">OptiCare AI Copilot</span>
+                <span id="aiSourceLabel" style="font-size:12px; color:#166534; font-weight:600;">Consulting OpenAI Cloud...</span>
               </div>
               <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('aiSuggestionBox').style.display='none'" style="padding:2px 8px; font-size:11px;">Close</button>
             </div>
 
             <div id="aiLoadingSpinner" style="display:none; text-align:center; padding:16px; color:#166534; font-size:13px; font-weight:600;">
-              ✨ Synthesizing optical refractions, tonometry &amp; clinical findings with AI...
+              ✨ Synthesizing optical refractions, tonometry &amp; clinical findings with OpenAI GPT-4o...
             </div>
 
-            <div id="aiResultContent" style="font-size:13px;">
+            <!-- Error State Message -->
+            <div id="aiErrorBox" style="display:none; background:#FEF2F2; border:1px solid #FECACA; border-radius:8px; padding:12px 14px; margin-bottom:8px; color:#991B1B; font-size:13px;">
+              <strong style="display:block; margin-bottom:4px; font-size:13.5px;">⚠️ Live AI Diagnostic Assistant Offline</strong>
+              <span id="aiErrorMessage">Unable to connect to OpenAI API.</span>
+              <div style="margin-top:6px; font-size:12px; color:#7F1D1D;">
+                Please select an ICD-10 diagnostic code manually from the dropdown below or enter the diagnosis directly.
+              </div>
+            </div>
+
+            <!-- Successful AI Result Drawer -->
+            <div id="aiResultContent" style="display:none; font-size:13px;">
               <div style="margin-bottom:8px;">
                 <strong>Suggested Primary Diagnosis:</strong> 
                 <span id="aiDiagText" style="color:#0B3D2E; font-weight:700;"></span> 
@@ -518,15 +528,24 @@
               const box = document.getElementById('aiSuggestionBox');
               const spinner = document.getElementById('aiLoadingSpinner');
               const content = document.getElementById('aiResultContent');
+              const errorBox = document.getElementById('aiErrorBox');
+              const errorMsg = document.getElementById('aiErrorMessage');
               const srcLbl = document.getElementById('aiSourceLabel');
+              const badge = document.getElementById('aiBadge');
 
               box.style.display = 'block';
+              box.style.background = '#F0FDF4';
+              box.style.borderColor = '#BBF7D0';
               spinner.style.display = 'block';
               content.style.display = 'none';
-              srcLbl.innerText = 'Consulting Clinical Intelligence...';
+              errorBox.style.display = 'none';
+              badge.className = 'badge badge-success';
+              badge.innerText = 'OptiCare AI Copilot';
+              srcLbl.innerText = 'Consulting OpenAI Intelligence...';
+              srcLbl.style.color = '#166534';
 
               const payload = {
-                chiefComplaint: document.querySelector('textarea[name="chief_complaint"]')?.value || '',
+                chiefComplaint: document.querySelector('input[name="chief_complaint"]')?.value || '',
                 vaUnaidedRight: document.querySelector('input[name="va_unaided_right"]')?.value || '',
                 vaUnaidedLeft: document.querySelector('input[name="va_unaided_left"]')?.value || '',
                 refractionRight: (document.querySelector('input[name="refraction_sphere_right"]')?.value || '0.00') + ' / ' + (document.querySelector('input[name="refraction_cyl_right"]')?.value || '0.00') + ' x ' + (document.querySelector('input[name="refraction_axis_right"]')?.value || '0'),
@@ -545,20 +564,37 @@
                   body: JSON.stringify(payload)
                 });
                 const json = await res.json();
+                spinner.style.display = 'none';
+
                 if (json.success && json.data) {
                   lastAiResult = json.data;
-                  srcLbl.innerText = json.source;
+                  srcLbl.innerText = json.source || 'OpenAI GPT-4o';
                   document.getElementById('aiDiagText').innerText = json.data.primaryDiagnosis || 'Refractive Anomaly';
                   document.getElementById('aiIcdText').innerText = json.data.icd10Code || 'H52.2';
                   document.getElementById('aiDiffsText').innerText = (json.data.differentialDiagnoses || []).join(', ');
                   document.getElementById('aiPlanText').innerText = json.data.managementPlan || '';
                   document.getElementById('aiAdviceText').innerText = json.data.patientCareAdvice || '';
-                  spinner.style.display = 'none';
                   content.style.display = 'block';
+                } else {
+                  box.style.background = '#FEF2F2';
+                  box.style.borderColor = '#FECACA';
+                  badge.className = 'badge badge-danger';
+                  badge.innerText = 'AI Offline';
+                  srcLbl.innerText = 'Connection / API Issue';
+                  srcLbl.style.color = '#991B1B';
+                  errorMsg.innerText = json.error || 'OpenAI API quota reached or connection unavailable.';
+                  errorBox.style.display = 'block';
                 }
               } catch (err) {
                 spinner.style.display = 'none';
-                srcLbl.innerText = 'Error analyzing data';
+                box.style.background = '#FEF2F2';
+                box.style.borderColor = '#FECACA';
+                badge.className = 'badge badge-danger';
+                badge.innerText = 'AI Error';
+                srcLbl.innerText = 'Network Failure';
+                srcLbl.style.color = '#991B1B';
+                errorMsg.innerText = 'Could not reach server to contact AI assistant: ' + err.message;
+                errorBox.style.display = 'block';
               }
             }
 

@@ -1877,7 +1877,7 @@ Intraocular Pressure (IOP): OD ${iopRight || '14'} mmHg, OS ${iopLeft || '14'} m
 Slit Lamp / Biomicroscopy / Ophthalmoscopy Notes: ${biomicroscopyFindings || 'Clear cornea, quiet anterior chamber, normal disc/macula'}
 `.trim();
 
-  // 1. Try OpenAI Live API (if OPENAI_API_KEY is available in env or settings)
+  // 1. Fetch OpenAI API Key from env or settings
   let openAiApiKey = process.env.OPENAI_API_KEY;
   if (!openAiApiKey) {
     try {
@@ -1885,94 +1885,69 @@ Slit Lamp / Biomicroscopy / Ophthalmoscopy Notes: ${biomicroscopyFindings || 'Cl
     } catch (e) {}
   }
 
-  if (openAiApiKey) {
-    try {
-      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + openAiApiKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an advanced clinical optometry decision support AI for OptiCare Eye Clinic. Provide concise, professional, evidence-based differential diagnosis, ICD-10 diagnostic code suggestions, clinical management plan with medications/lifestyle advice, and follow-up timeline based on the examination findings. Return strictly a valid JSON object matching this structure: {"primaryDiagnosis": "...", "icd10Code": "...", "differentialDiagnoses": ["..."], "managementPlan": "...", "patientCareAdvice": "...", "followUpWeeks": 4}'
-            },
-            {
-              role: 'user',
-              content: `Please analyze the following optometric examination findings and generate clinical recommendations:\n\n${clinicalContext}`
-            }
-          ],
-          temperature: 0.2,
-          max_tokens: 600,
-          response_format: { type: 'json_object' }
-        })
+  if (!openAiApiKey) {
+    return res.json({
+      success: false,
+      error: 'OpenAI API key is not configured. Please configure an active OpenAI key in Settings to use the AI Copilot.'
+    });
+  }
+
+  try {
+    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + openAiApiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an advanced clinical optometry decision support AI for OptiCare Eye Clinic. Provide concise, professional, evidence-based differential diagnosis, ICD-10 diagnostic code suggestions, clinical management plan with medications/lifestyle advice, and follow-up timeline based on the examination findings. Return strictly a valid JSON object matching this structure: {"primaryDiagnosis": "...", "icd10Code": "...", "differentialDiagnoses": ["..."], "managementPlan": "...", "patientCareAdvice": "...", "followUpWeeks": 4}'
+          },
+          {
+            role: 'user',
+            content: `Please analyze the following optometric examination findings and generate clinical recommendations:\n\n${clinicalContext}`
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 600,
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    const data = await aiResponse.json();
+
+    if (data.error) {
+      console.warn('[OpenAI API Error]:', data.error.message);
+      return res.json({
+        success: false,
+        error: data.error.message || 'OpenAI API request failed (insufficient quota or invalid key).'
       });
-
-      const data = await aiResponse.json();
-      if (data.choices && data.choices[0] && data.choices[0].message) {
-        const parsed = JSON.parse(data.choices[0].message.content);
-        return res.json({
-          success: true,
-          source: 'OpenAI GPT-4o-mini (Live Cloud Intelligence)',
-          data: parsed
-        });
-      }
-    } catch (aiErr) {
-      console.warn('[OpenAI Notice - Using Clinical Knowledge Fallback]:', aiErr.message);
     }
-  }
 
-  // 2. Intelligent Clinical Rule Fallback Engine (Runs seamlessly if offline/quota limit)
-  const iopOD = parseFloat(iopRight) || 14;
-  const iopOS = parseFloat(iopLeft) || 14;
-  const ageNum = parseInt(patientAge) || 35;
-  const ccLower = (chiefComplaint || '').toLowerCase();
-
-  let primaryDiag = 'Compound Myopic Astigmatism with Presbyopia';
-  let icdCode = 'H52.2';
-  let diffs = ['Simple Myopia (H52.1)', 'Astigmatism (H52.2)', 'Presbyopia (H52.4)'];
-  let plan = 'Prescribe corrective progressive spectacle lenses with anti-reflective coating. Annual review in 12 months.';
-  let advice = 'Maintain 20-20-20 rule during screen use. Ensure adequate reading illumination.';
-  let followUp = 12;
-
-  if (iopOD >= 22 || iopOS >= 22 || Math.abs(iopOD - iopOS) >= 4) {
-    primaryDiag = 'Ocular Hypertension / Glaucoma Suspect';
-    icdCode = 'H40.0';
-    diffs = ['Primary Open-Angle Glaucoma (H40.1)', 'Ocular Hypertension (H40.01)', 'Pigmentary Glaucoma (H40.13)'];
-    plan = 'Perform visual field analysis (Humphrey 24-2) and gonioscopy. Consider starting topical prostaglandin analogue or beta-blocker (Timolol 0.5% BD).';
-    advice = 'Strict compliance with prescribed eye drops. Avoid excessive fluid intake within short intervals.';
-    followUp = 4;
-  } else if (ccLower.includes('itch') || ccLower.includes('discharge') || ccLower.includes('red')) {
-    primaryDiag = 'Allergic Conjunctivitis (Bilateral)';
-    icdCode = 'H10.1';
-    diffs = ['Vernal Keratoconjunctivitis (H10.11)', 'Bacterial Conjunctivitis (H10.0)', 'Dry Eye Syndrome (H04.12)'];
-    plan = 'Prescribe Ketotifen Fumarate 0.025% eye drops BD for 2 weeks + Artificial Tears CMC 0.5% QDS. Cold compresses.';
-    advice = 'Avoid eye rubbing. Protect eyes from dust and smoke allergens.';
-    followUp = 2;
-  } else if (ageNum >= 40 && (ccLower.includes('near') || ccLower.includes('read') || ccLower.includes('phone'))) {
-    primaryDiag = 'Presbyopia with Astigmatism';
-    icdCode = 'H52.4';
-    diffs = ['Hyperopia (H52.0)', 'Accommodative Insufficiency (H52.5)'];
-    plan = 'Dispense near spectacle reading correction (Add +1.50 to +2.50 DS). Regular optical follow-up.';
-    advice = 'Wear reading glasses for near tasks to reduce asthenopia and frontal headaches.';
-    followUp = 12;
-  }
-
-  return res.json({
-    success: true,
-    source: 'OptiCare Clinical Knowledge Engine (Offline Mode)',
-    data: {
-      primaryDiagnosis: primaryDiag,
-      icd10Code: icdCode,
-      differentialDiagnoses: diffs,
-      managementPlan: plan,
-      patientCareAdvice: advice,
-      followUpWeeks: followUp
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      const parsed = JSON.parse(data.choices[0].message.content);
+      return res.json({
+        success: true,
+        source: 'OpenAI GPT-4o-mini (Live Cloud Intelligence)',
+        data: parsed
+      });
     }
-  });
+
+    return res.json({
+      success: false,
+      error: 'No clinical response received from OpenAI model.'
+    });
+
+  } catch (aiErr) {
+    console.error('[OpenAI Network Error]:', aiErr.message);
+    return res.json({
+      success: false,
+      error: 'Network connection to OpenAI failed: ' + aiErr.message
+    });
+  }
 });
 
 // ===== Misc =====
