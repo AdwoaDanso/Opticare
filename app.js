@@ -1877,13 +1877,20 @@ Intraocular Pressure (IOP): OD ${iopRight || '14'} mmHg, OS ${iopLeft || '14'} m
 Slit Lamp / Biomicroscopy / Ophthalmoscopy Notes: ${biomicroscopyFindings || 'Clear cornea, quiet anterior chamber, normal disc/macula'}
 `.trim();
 
-  // 1. Try OpenAI Live API (if OPENAI_API_KEY is available)
-  if (process.env.OPENAI_API_KEY) {
+  // 1. Try OpenAI Live API (if OPENAI_API_KEY is available in env or settings)
+  let openAiApiKey = process.env.OPENAI_API_KEY;
+  if (!openAiApiKey) {
+    try {
+      openAiApiKey = db.prepare("SELECT value FROM settings WHERE key = 'openai_api_key'").get()?.value;
+    } catch (e) {}
+  }
+
+  if (openAiApiKey) {
     try {
       const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY,
+          'Authorization': 'Bearer ' + openAiApiKey,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
