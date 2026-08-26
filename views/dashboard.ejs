@@ -21,25 +21,37 @@
 
     <!-- Certificate alert (admin only) -->
     <% if (expiringCertificates && expiringCertificates.length > 0 && role === 'admin') { %>
-      <div class="card" style="background:#FFF4E5; border-left:4px solid #B8860B;">
-        <strong style="display:flex; align-items:center; gap:8px;">
-          <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#B8860B;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Certificate Renewal Needed
-        </strong>
-        <% expiringCertificates.forEach(function(cert) { %>
-          <p style="margin:4px 0;"><%= cert.name %> (Expires <%= cert.expiry_date %>)</p>
-        <% }); %>
-        <a href="/certificates">Go to Certificates</a>
+      <div id="certAlertBox" class="card" style="background:#FFF4E5; border-left:4px solid #B8860B; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <strong style="display:flex; align-items:center; gap:8px; color:#B8860B; font-size:14px;">
+            <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#B8860B;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Certificate Renewal Needed (<%= expiringCertificates.length %>)
+          </strong>
+          <button type="button" onclick="dismissAlert('certAlertBox', 'opticare_dismissed_cert')" style="background:rgba(184,134,11,0.1); border:1px solid rgba(184,134,11,0.3); color:#B8860B; cursor:pointer; font-weight:700; font-size:12px; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px;" title="Dismiss alert for this session">
+            ✕ Dismiss
+          </button>
+        </div>
+        <div style="margin-top:6px;">
+          <% expiringCertificates.forEach(function(cert) { %>
+            <p style="margin:3px 0; font-size:13px;"><%= cert.name %> (Expires <%= cert.expiry_date %>)</p>
+          <% }); %>
+          <a href="/certificates" style="font-size:12.5px; font-weight:600; color:#B8860B; display:inline-block; margin-top:4px;">Manage Certificates &rarr;</a>
+        </div>
       </div>
     <% } %>
 
     <!-- Near-expiry drug alert (admin & receptionist) -->
     <% if (expiringDrugs && expiringDrugs.length > 0 && role !== 'doctor') { %>
-      <div class="card" style="background:#FEF3C7; border-left:4px solid #D97706;">
-        <strong style="display:flex; align-items:center; gap:8px; color:#92400E;">
-          <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#D97706;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Drug Expiry Alert: <%= expiringDrugs.length %> item(s) expiring within 30 days
-        </strong>
+      <div id="drugExpiryAlertBox" class="card" style="background:#FEF3C7; border-left:4px solid #D97706; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <strong style="display:flex; align-items:center; gap:8px; color:#92400E; font-size:14px;">
+            <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#D97706;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Drug Expiry Alert: <%= expiringDrugs.length %> item(s) expiring within 30 days
+          </strong>
+          <button type="button" onclick="dismissAlert('drugExpiryAlertBox', 'opticare_dismissed_drug_expiry')" style="background:rgba(217,119,6,0.12); border:1px solid rgba(217,119,6,0.3); color:#92400E; cursor:pointer; font-weight:700; font-size:12px; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px;" title="Dismiss alert for this session">
+            ✕ Dismiss
+          </button>
+        </div>
         <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
           <% expiringDrugs.slice(0, 5).forEach(function(item) { %>
             <span style="background:#fff; border:1px solid #FDE68A; border-radius:6px; padding:4px 10px; font-size:12px;">
@@ -47,11 +59,34 @@
             </span>
           <% }); %>
           <% if (expiringDrugs.length > 5) { %>
-            <a href="/inventory" style="font-size:12px; color:#92400E; font-weight:600;">+<%= expiringDrugs.length - 5 %> more &rarr;</a>
+            <a href="/inventory" style="font-size:12px; color:#92400E; font-weight:600; align-self:center;">+<%= expiringDrugs.length - 5 %> more &rarr;</a>
           <% } %>
         </div>
       </div>
     <% } %>
+
+    <script>
+      function dismissAlert(boxId, storageKey) {
+        const box = document.getElementById(boxId);
+        if (box) {
+          box.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+          box.style.opacity = '0';
+          box.style.transform = 'translateY(-6px)';
+          setTimeout(() => { box.style.display = 'none'; }, 200);
+          if (storageKey) sessionStorage.setItem(storageKey, '1');
+        }
+      }
+      document.addEventListener('DOMContentLoaded', () => {
+        if (sessionStorage.getItem('opticare_dismissed_cert') === '1') {
+          const c = document.getElementById('certAlertBox');
+          if (c) c.style.display = 'none';
+        }
+        if (sessionStorage.getItem('opticare_dismissed_drug_expiry') === '1') {
+          const d = document.getElementById('drugExpiryAlertBox');
+          if (d) d.style.display = 'none';
+        }
+      });
+    </script>
 
     <!-- Stat Cards -->
     <div class="stats-grid">

@@ -322,15 +322,20 @@
 
     <!-- Near-Expiry Alert Banner -->
     <% if (expiringItems && expiringItems.length > 0 && role !== 'doctor') { %>
-      <div class="card" style="background:#FFFBEB; border-left:4px solid #D97706; margin-bottom:20px; padding:16px 20px;">
-        <strong style="display:flex; align-items:center; gap:8px; color:#92400E; font-size:14px;">
-          <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#D97706;">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          Batch Expiry Notice: <%= expiringItems.length %> pharmaceutical item(s) expiring within 30 days
-        </strong>
+      <div id="invExpiryAlertBox" class="card" style="background:#FFFBEB; border-left:4px solid #D97706; margin-bottom:20px; padding:16px 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <strong style="display:flex; align-items:center; gap:8px; color:#92400E; font-size:14px;">
+            <svg class="svg-icon" viewBox="0 0 24 24" style="stroke:#D97706;">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Batch Expiry Notice: <%= expiringItems.length %> pharmaceutical item(s) expiring within 30 days
+          </strong>
+          <button type="button" onclick="dismissInvAlert('invExpiryAlertBox', 'opticare_dismissed_inv_expiry')" style="background:rgba(217,119,6,0.12); border:1px solid rgba(217,119,6,0.3); color:#92400E; cursor:pointer; font-weight:700; font-size:12px; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px;" title="Dismiss alert for this session">
+            ✕ Dismiss
+          </button>
+        </div>
         <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:10px;">
           <% expiringItems.forEach(function(item) { %>
             <div style="background:#fff; border:1px solid #FDE68A; border-radius:8px; padding:6px 12px; font-size:12.5px; display:flex; align-items:center; gap:8px;">
@@ -341,6 +346,25 @@
           <% }); %>
         </div>
       </div>
+
+      <script>
+        function dismissInvAlert(boxId, storageKey) {
+          const box = document.getElementById(boxId);
+          if (box) {
+            box.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+            box.style.opacity = '0';
+            box.style.transform = 'translateY(-6px)';
+            setTimeout(() => { box.style.display = 'none'; }, 200);
+            if (storageKey) sessionStorage.setItem(storageKey, '1');
+          }
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+          if (sessionStorage.getItem('opticare_dismissed_inv_expiry') === '1') {
+            const d = document.getElementById('invExpiryAlertBox');
+            if (d) d.style.display = 'none';
+          }
+        });
+      </script>
     <% } %>
 
     <!-- Add New Stock Item Form (Collapsible) -->
