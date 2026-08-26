@@ -679,6 +679,27 @@
         </div>
       </div>
 
+      <!-- Billing Tab Error/Success Banner -->
+      <div id="billingAlertBox" style="display:none; margin-bottom:16px;"></div>
+      <script>
+        (function() {
+          const params = new URLSearchParams(window.location.search);
+          const err = params.get('error');
+          if (err) {
+            const box = document.getElementById('billingAlertBox');
+            box.style.display = 'block';
+            box.innerHTML = `
+              <div class="card" style="margin:0; background:#FEF2F2; border-left:4px solid #DC2626; padding:12px 16px; color:#991B1B; font-size:13px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <strong>⚠️ Payment Notice:</strong> ${decodeURIComponent(err).replace(/_/g, ' ')}
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('billingAlertBox').style.display='none'" style="padding:2px 8px; font-size:11px;">✕</button>
+              </div>
+            `;
+          }
+        })();
+      </script>
+
       <!-- Financial Status Metric Cards (3 Clean Cards) -->
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:24px;">
         <div class="card" style="margin:0; padding:18px 22px; border-left:4px solid #0B3D2E; background:#fff;">

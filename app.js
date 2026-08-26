@@ -8,6 +8,7 @@ const path = require('path');
 const { checkForDecline } = require('./vision');
 
 const app = express();
+app.enable('trust proxy');
 app.set('view engine', 'ejs');
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -752,7 +753,7 @@ app.post('/patients/:id/invoices', requireLogin, requireRole('admin', 'reception
 });
 
 // One-Click Pay Full Bill / All Unpaid Items
-app.post('/patients/:id/invoices/pay-all', requireLogin, requireRole('admin', 'receptionist'), (req, res) => {
+app.post('/patients/:id/invoices/pay-all', requireLogin, requireRole('admin', 'receptionist', 'doctor'), (req, res) => {
   const patientId = req.params.id;
   const paymentMethod = req.body.payment_method || 'cash';
 
@@ -773,23 +774,23 @@ app.post('/patients/:id/invoices/pay-all', requireLogin, requireRole('admin', 'r
 function getPaystackSecretKey() {
   try {
     const dbRow = db.prepare("SELECT value FROM settings WHERE key = 'paystack_secret_key'").get();
-    return process.env.PAYSTACK_SECRET_KEY || (dbRow ? dbRow.value : '');
+    return (process.env.PAYSTACK_SECRET_KEY || (dbRow ? dbRow.value : '') || '').trim();
   } catch (e) {
-    return process.env.PAYSTACK_SECRET_KEY || '';
+    return (process.env.PAYSTACK_SECRET_KEY || '').trim();
   }
 }
 
 function getPaystackPublicKey() {
   try {
     const dbRow = db.prepare("SELECT value FROM settings WHERE key = 'paystack_public_key'").get();
-    return process.env.PAYSTACK_PUBLIC_KEY || (dbRow ? dbRow.value : '');
+    return (process.env.PAYSTACK_PUBLIC_KEY || (dbRow ? dbRow.value : '') || '').trim();
   } catch (e) {
-    return process.env.PAYSTACK_PUBLIC_KEY || '';
+    return (process.env.PAYSTACK_PUBLIC_KEY || '').trim();
   }
 }
 
 // Paystack Hosted Checkout Initialization (MTN MoMo, Telecel Cash, AT Money, Card)
-app.post('/patients/:id/paystack/initialize', requireLogin, requireRole('admin', 'receptionist'), async (req, res) => {
+app.post('/patients/:id/paystack/initialize', requireLogin, requireRole('admin', 'receptionist', 'doctor'), async (req, res) => {
   const patientId = req.params.id;
   const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(patientId);
   if (!patient) return res.status(404).send('Patient not found');
@@ -803,18 +804,22 @@ app.post('/patients/:id/paystack/initialize', requireLogin, requireRole('admin',
 
   const secretKey = getPaystackSecretKey();
   if (!secretKey) {
-    return res.redirect('/patients/' + patientId + '?error=missing_paystack_key');
+    return res.redirect('/patients/' + patientId + '?tab=billing&error=missing_paystack_key');
   }
 
-  const email = (patient.email && patient.email.includes('@')) ? patient.email : `patient_${patientId}@opticare.local`;
+  const email = (patient.email && patient.email.includes('@') && patient.email.includes('.')) ? patient.email : `patient_${patientId}@opticare.com`;
   const reference = `OPTICARE_PAY_${patientId}_${Date.now()}`;
   const amountInPesewas = Math.round(totalAmount * 100);
+
+  const host = req.get('host');
+  const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : req.protocol;
+  const callbackUrl = `${protocol}://${host}/paystack/callback`;
 
   try {
     const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${secretKey.trim()}`,
+        'Authorization': `Bearer ${secretKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -822,7 +827,7 @@ app.post('/patients/:id/paystack/initialize', requireLogin, requireRole('admin',
         amount: amountInPesewas,
         currency: 'GHS',
         reference: reference,
-        callback_url: `${req.protocol}://${req.get('host')}/paystack/callback`,
+        callback_url: callbackUrl,
         metadata: {
           patient_id: patientId,
           patient_name: patient.full_name,
@@ -838,11 +843,11 @@ app.post('/patients/:id/paystack/initialize', requireLogin, requireRole('admin',
       return res.redirect(data.data.authorization_url);
     } else {
       console.error('[Paystack Init Error]:', data);
-      return res.redirect('/patients/' + patientId + '?error=' + encodeURIComponent(data.message || 'paystack_init_failed'));
+      return res.redirect('/patients/' + patientId + '?tab=billing&error=' + encodeURIComponent(data.message || 'paystack_init_failed'));
     }
   } catch (err) {
     console.error('[Paystack Init Exception]:', err.message);
-    return res.redirect('/patients/' + patientId + '?error=paystack_network_error');
+    return res.redirect('/patients/' + patientId + '?tab=billing&error=paystack_network_error');
   }
 });
 
@@ -862,7 +867,7 @@ app.get('/paystack/callback', requireLogin, async (req, res) => {
     const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${secretKey.trim()}`,
+        'Authorization': `Bearer ${secretKey}`,
         'Content-Type': 'application/json'
       }
     });
@@ -887,7 +892,6 @@ app.get('/paystack/callback', requireLogin, async (req, res) => {
 
         const phone = patient ? patient.phone : metadata.patient_phone;
         if (phone) {
-          const firstName = patient ? (patient.full_name.split(' ')[0] || patient.full_name) : 'Valued Patient';
           const msg = `OptiCare Receipt: Payment of GHS ${amountPaid} received via Mobile Money (${channel.toUpperCase()}) for Patient #${patientId}. Ref: ${reference}. Thank you.`;
           dispatchSMS(patientId, phone, msg);
         }
@@ -903,7 +907,7 @@ app.get('/paystack/callback', requireLogin, async (req, res) => {
 });
 
 // Mobile Money (MoMo) Live USSD Prompt & Instant Settlement
-app.post('/patients/:id/invoices/pay-momo', requireLogin, requireRole('admin', 'receptionist'), async (req, res) => {
+app.post('/patients/:id/invoices/pay-momo', requireLogin, requireRole('admin', 'receptionist', 'doctor'), async (req, res) => {
   const patientId = req.params.id;
   const momoPhone = req.body.momo_phone || '';
   const network = req.body.momo_network || 'mtn'; // mtn, vod (Telecel), tgo (AT)
@@ -929,13 +933,13 @@ app.post('/patients/:id/invoices/pay-momo', requireLogin, requireRole('admin', '
   // Direct Paystack Mobile Money Charge API
   if (secretKey) {
     try {
-      const paystackEmail = (patient && patient.email && patient.email.includes('@')) ? patient.email : `patient${patientId}@opticare.local`;
+      const paystackEmail = (patient && patient.email && patient.email.includes('@') && patient.email.includes('.')) ? patient.email : `patient${patientId}@opticare.com`;
       const amountInPesewas = Math.round(totalAmount * 100);
 
       const paystackResponse = await fetch('https://api.paystack.co/charge', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${secretKey.trim()}`,
+          'Authorization': `Bearer ${secretKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -972,7 +976,6 @@ app.post('/patients/:id/invoices/pay-momo', requireLogin, requireRole('admin', '
   // Send Automated SMS Payment Receipt to Patient's Phone
   const receiptPhone = momoPhone || (patient ? patient.phone : null);
   if (receiptPhone) {
-    const firstName = patient ? (patient.full_name.split(' ')[0] || patient.full_name) : 'Valued Patient';
     const smsReceipt = `OptiCare Receipt: Payment of GHS ${totalAmount.toFixed(2)} received via Mobile Money (${network.toUpperCase()}) for Patient #${patientId}. Ref: ${transactionReference}. Thank you.`;
     dispatchSMS(patientId, receiptPhone, smsReceipt);
   }
@@ -984,7 +987,7 @@ app.post('/patients/:id/invoices/pay-momo', requireLogin, requireRole('admin', '
 });
 
 // Pay Individual Invoice Line Item
-app.post('/invoices/:id/pay', requireLogin, requireRole('admin', 'receptionist'), (req, res) => {
+app.post('/invoices/:id/pay', requireLogin, requireRole('admin', 'receptionist', 'doctor'), (req, res) => {
   const paymentMethod = req.body.payment_method || 'cash';
   const invoice = db.prepare('SELECT * FROM invoices WHERE id = ?').get(req.params.id);
 
