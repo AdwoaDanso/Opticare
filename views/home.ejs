@@ -76,6 +76,24 @@
       </div>
     <% } %>
 
+    <!-- Queue Check-In Confirmation Alert -->
+    <% if (typeof checkedInName !== 'undefined' && checkedInName) { %>
+      <div class="card" style="background:#EFF6FF; border:1px solid #BFDBFE; border-left:4px solid #2563EB; padding:14px 20px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <div style="font-size:14px; font-weight:700; color:#1E40AF; display:flex; align-items:center; gap:8px;">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563EB" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            ✓ <%= checkedInName %> Checked into Waiting Queue!
+          </div>
+          <div style="font-size:12.5px; color:#1E3A8A; margin-top:2px;">
+            Current Queue Position: <strong>#<%= typeof queuePos !== 'undefined' && queuePos ? queuePos : waitingCount %></strong> · Attending doctors have been notified.
+          </div>
+        </div>
+        <div>
+          <a href="/queue" class="btn btn-sm" style="background:#2563EB; font-weight:700;">View Live Queue &rarr;</a>
+        </div>
+      </div>
+    <% } %>
+
     <!-- Register Patient Form -->
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">

@@ -240,6 +240,8 @@ app.get('/', requireLogin, (req, res) => {
   const searchTerm = req.query.q;
   const registeredName = req.query.name || null;
   const registeredId = req.query.id || null;
+  const checkedInName = req.query.checked_name || null;
+  const queuePos = req.query.pos || null;
 
   let patients;
   if (searchTerm) {
@@ -264,6 +266,8 @@ app.get('/', requireLogin, (req, res) => {
     expiringCertificates: expiringCertificates,
     registeredName: registeredName,
     registeredId: registeredId,
+    checkedInName: checkedInName,
+    queuePos: queuePos,
   });
 });
 
@@ -1215,14 +1219,22 @@ app.post('/queue/checkin/:patientId', requireLogin, (req, res) => {
     dispatchSMS(patient.id, patient.phone, smsText);
   }
 
-  // Redirect back to referring page if available or patient profile
+  // Redirect back to referring page without opening profile
   const referer = req.get('Referrer');
-  if (referer && referer.includes('/queue')) {
-    return res.redirect('/queue?checkedin=1');
-  } else if (referer && referer.includes('/dashboard')) {
-    return res.redirect('/dashboard?checkedin=1');
+  const patientName = patient ? patient.full_name : 'Patient';
+
+  if (referer) {
+    if (referer.includes('/patients/')) {
+      return res.redirect(`/patients/${patientId}?checkedin=1&pos=${waitingCount}`);
+    } else if (referer.includes('/queue')) {
+      return res.redirect(`/queue?checkedin=1&pos=${waitingCount}`);
+    } else if (referer.includes('/dashboard')) {
+      return res.redirect(`/dashboard?checkedin=1&pos=${waitingCount}`);
+    }
   }
-  res.redirect('/patients/' + patientId + '?checkedin=1');
+
+  // Default: Keep receptionist on the Patients Directory
+  res.redirect(`/?checkedin=1&checked_name=${encodeURIComponent(patientName)}&pos=${waitingCount}`);
 });
 
 app.get('/queue', requireLogin, (req, res) => {
