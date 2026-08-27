@@ -241,15 +241,25 @@ app.get('/dashboard', requireLogin, (req, res) => {
 // ===== Home / Patients =====
 
 app.get('/', requireLogin, (req, res) => {
-  const searchTerm = req.query.q;
+  const rawSearch = (req.query.q || '').trim();
+  const cleanTerm = rawSearch.replace(/^#/, '').trim();
   const registeredName = req.query.name || null;
   const registeredId = req.query.id || null;
   const checkedInName = req.query.checked_name || null;
   const queuePos = req.query.pos || null;
 
   let patients;
-  if (searchTerm) {
-    patients = db.prepare('SELECT * FROM patients WHERE full_name LIKE ? OR phone LIKE ? OR address LIKE ? ORDER BY id DESC').all('%' + searchTerm + '%', '%' + searchTerm + '%', '%' + searchTerm + '%');
+  if (cleanTerm) {
+    const likeTerm = '%' + cleanTerm + '%';
+    patients = db.prepare(`
+      SELECT * FROM patients 
+      WHERE CAST(id AS TEXT) = ? 
+         OR full_name LIKE ? 
+         OR phone LIKE ? 
+         OR email LIKE ? 
+         OR address LIKE ? 
+      ORDER BY id DESC
+    `).all(cleanTerm, likeTerm, likeTerm, likeTerm, likeTerm);
   } else {
     patients = db.prepare('SELECT * FROM patients ORDER BY id DESC').all();
   }
@@ -272,6 +282,7 @@ app.get('/', requireLogin, (req, res) => {
     registeredId: registeredId,
     checkedInName: checkedInName,
     queuePos: queuePos,
+    searchTerm: rawSearch,
   });
 });
 
