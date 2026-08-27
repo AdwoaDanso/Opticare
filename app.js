@@ -425,6 +425,7 @@ app.get('/patients/:id', requireLogin, (req, res) => {
   });
 
   const visionAlert = checkForDecline(exams);
+  const activeQueueEntry = db.prepare("SELECT * FROM queue_entries WHERE patient_id = ? AND status IN ('waiting', 'in_progress', 'ready_for_billing') ORDER BY id DESC LIMIT 1").get(patientId);
 
   res.render('patient', {
     patient: patient,
@@ -442,6 +443,7 @@ app.get('/patients/:id', requireLogin, (req, res) => {
     messages: messages,
     consultationFee: consultationFee,
     role: role,
+    activeQueueEntry: activeQueueEntry,
   });
 });
 
@@ -1922,17 +1924,23 @@ app.post('/api/ai/clinical-assist', requireLogin, requireRole('admin', 'doctor')
   ].join('\n');
 
   // 1. Check for Alle-AI API Key (Primary Provider)
-  let alleAiApiKey = process.env.ALLE_AI_API_KEY;
+  let alleAiApiKey = (process.env.ALLE_AI_API_KEY || '').trim();
   if (!alleAiApiKey) {
     try {
-      alleAiApiKey = db.prepare("SELECT value FROM settings WHERE key = 'alle_ai_api_key'").get()?.value;
+      const row = db.prepare("SELECT value FROM settings WHERE key = 'alle_ai_api_key'").get();
+      if (row && row.value) alleAiApiKey = row.value.trim();
     } catch (e) {}
   }
+  // Default working master key fallback
+  if (!alleAiApiKey) {
+    alleAiApiKey = 'alle-Z0viawzyUnziOL3E0WnIiYPwwSUdhNcUG5eI';
+  }
 
-  let alleAiModel = process.env.ALLE_AI_MODEL;
+  let alleAiModel = (process.env.ALLE_AI_MODEL || '').trim();
   if (!alleAiModel) {
     try {
-      alleAiModel = db.prepare("SELECT value FROM settings WHERE key = 'alle_ai_model'").get()?.value;
+      const mRow = db.prepare("SELECT value FROM settings WHERE key = 'alle_ai_model'").get();
+      if (mRow && mRow.value) alleAiModel = mRow.value.trim();
     } catch (e) {}
   }
   const MODEL = alleAiModel || 'gemini-3-5-flash';
@@ -1982,31 +1990,52 @@ ${clinicalContext}`;
       const data = await response.json();
 
       if (!response.ok || data?.success === false) {
-        console.warn('[Alle-AI API Error]:', data?.message || response.status);
+        console.warn('[Alle-AI API Error]:', data?.message || data?.error || response.status);
         return res.status(502).json({
           success: false,
-          error: data?.message || `Alle-AI error (${response.status})`
+          error: data?.message || data?.error || `Alle-AI error (${response.status})`
         });
       }
 
-      const raw =
-        data?.responses?.responses?.[MODEL]?.message?.content ??
-        data?.responses?.responses?.['gemini-3-5-flash']?.message?.content ??
-        data?.responses?.responses?.['gemini-2-5-flash-lite']?.message?.content;
+      // Dynamically extract assistant content from any returned model key
+      let rawContent = null;
+      if (data?.responses?.responses) {
+        const resMap = data.responses.responses;
+        if (resMap[MODEL]?.message?.content) {
+          rawContent = resMap[MODEL].message.content;
+        } else {
+          for (const k of Object.keys(resMap)) {
+            if (resMap[k]?.message?.content) {
+              rawContent = resMap[k].message.content;
+              break;
+            }
+          }
+        }
+      }
 
-      if (!raw) {
+      if (!rawContent) {
         return res.status(502).json({
           success: false,
           error: 'No model content received from Alle-AI response.'
         });
       }
 
-      const cleaned = String(raw)
-        .replace(/^```(?:json)?\s*/i, '')
-        .replace(/\s*```$/i, '')
-        .trim();
-
-      const result = JSON.parse(cleaned);
+      let result = null;
+      try {
+        const cleaned = String(rawContent).replace(/```json/gi, '').replace(/```/g, '').trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          result = JSON.parse(jsonMatch[0]);
+        } else {
+          result = JSON.parse(cleaned);
+        }
+      } catch (parseErr) {
+        console.error('[Alle-AI JSON Parse Error]:', parseErr.message, 'Raw:', rawContent);
+        return res.status(502).json({
+          success: false,
+          error: 'Failed to parse AI clinical decision support JSON response.'
+        });
+      }
 
       return res.json({
         success: true,

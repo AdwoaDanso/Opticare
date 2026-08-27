@@ -127,12 +127,30 @@
           <a href="/" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:6px;">
             &larr; Patient List
           </a>
-          <form action="/queue/checkin/<%= patient.id %>" method="POST" style="margin:0;">
-            <button type="submit" class="btn" title="Add patient to live waiting queue">
-              <svg class="svg-icon sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
-              Check In
-            </button>
-          </form>
+          <% if (typeof activeQueueEntry !== 'undefined' && activeQueueEntry) { %>
+            <% if (activeQueueEntry.status === 'in_progress') { %>
+              <span class="badge" style="background:#EAF5EF; color:#0B3D2E; border:1px solid #BBF7D0; font-size:12px; font-weight:700; padding:7px 12px; display:inline-flex; align-items:center; gap:6px;">
+                <span style="width:8px; height:8px; border-radius:50%; background:#166534; display:inline-block; animation:pulse 1.5s infinite;"></span>
+                In Consultation (<%= activeQueueEntry.room || 'Room 1' %>)
+              </span>
+            <% } else if (activeQueueEntry.status === 'waiting') { %>
+              <span class="badge badge-danger" style="font-size:12px; font-weight:700; padding:7px 12px; display:inline-flex; align-items:center; gap:6px;">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                In Waiting Queue
+              </span>
+            <% } else if (activeQueueEntry.status === 'ready_for_billing') { %>
+              <span class="badge" style="background:#FEF3C7; color:#92400E; border:1px solid #FDE68A; font-size:12px; font-weight:700; padding:7px 12px;">
+                At Cashier Desk
+              </span>
+            <% } %>
+          <% } else { %>
+            <form action="/queue/checkin/<%= patient.id %>" method="POST" style="margin:0;">
+              <button type="submit" class="btn" title="Add patient to live waiting queue">
+                <svg class="svg-icon sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+                Check In
+              </button>
+            </form>
+          <% } %>
           <a href="/patients/<%= patient.id %>/referral" class="btn btn-secondary">
             <svg class="svg-icon sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             Create Referral
@@ -438,7 +456,7 @@
             <div class="section-header" style="border:none; margin:0; padding:0;">6. Clinical Diagnosis &amp; ICD-10 Coding</div>
             <button type="button" id="aiAssistBtn" onclick="runAiClinicalAssistant()" class="btn btn-sm" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, #10B981, #0B3D2E); color:#fff; font-weight:700; border:none; box-shadow:0 2px 6px rgba(16,185,129,0.3);">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
-              ✨ AI Clinical Copilot (OpenAI)
+              ✨ AI Clinical Copilot (Alle-AI Gemini 3.5)
             </button>
           </div>
 
@@ -447,19 +465,19 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
               <div style="display:flex; align-items:center; gap:8px;">
                 <span id="aiBadge" class="badge badge-success" style="font-size:11px;">OptiCare AI Copilot</span>
-                <span id="aiSourceLabel" style="font-size:12px; color:#166534; font-weight:600;">Consulting OpenAI Cloud...</span>
+                <span id="aiSourceLabel" style="font-size:12px; color:#166534; font-weight:600;">Consulting Alle-AI Cloud...</span>
               </div>
               <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('aiSuggestionBox').style.display='none'" style="padding:2px 8px; font-size:11px;">Close</button>
             </div>
 
             <div id="aiLoadingSpinner" style="display:none; text-align:center; padding:16px; color:#166534; font-size:13px; font-weight:600;">
-              ✨ Synthesizing optical refractions, tonometry &amp; clinical findings with OpenAI GPT-4o...
+              ✨ Synthesizing optical refractions, tonometry &amp; clinical findings with Alle-AI Gemini 3.5 Flash...
             </div>
 
             <!-- Error State Message -->
             <div id="aiErrorBox" style="display:none; background:#FEF2F2; border:1px solid #FECACA; border-radius:8px; padding:12px 14px; margin-bottom:8px; color:#991B1B; font-size:13px;">
               <strong style="display:block; margin-bottom:4px; font-size:13.5px;">⚠️ Live AI Diagnostic Assistant Offline</strong>
-              <span id="aiErrorMessage">Unable to connect to OpenAI API.</span>
+              <span id="aiErrorMessage">Unable to connect to AI API.</span>
               <div style="margin-top:6px; font-size:12px; color:#7F1D1D;">
                 Please select an ICD-10 diagnostic code manually from the dropdown below or enter the diagnosis directly.
               </div>
@@ -541,7 +559,7 @@
               errorBox.style.display = 'none';
               badge.className = 'badge badge-success';
               badge.innerText = 'OptiCare AI Copilot';
-              srcLbl.innerText = 'Consulting OpenAI Intelligence...';
+              srcLbl.innerText = 'Consulting Alle-AI Gemini 3.5...';
               srcLbl.style.color = '#166534';
 
               const payload = {
@@ -568,7 +586,7 @@
 
                 if (json.success && json.data) {
                   lastAiResult = json.data;
-                  srcLbl.innerText = json.source || 'OpenAI GPT-4o';
+                  srcLbl.innerText = json.source || 'Alle-AI Gemini 3.5 Flash';
                   document.getElementById('aiDiagText').innerText = json.data.primaryDiagnosis || 'Refractive Anomaly';
                   document.getElementById('aiIcdText').innerText = json.data.icd10Code || 'H52.2';
                   document.getElementById('aiDiffsText').innerText = (json.data.differentialDiagnoses || []).join(', ');

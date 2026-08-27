@@ -26,6 +26,6 @@ services:
       - key: PAYSTACK_PUBLIC_KEY
         sync: false
       - key: ALLE_AI_API_KEY
-        sync: false
+        value: alle-Z0viawzyUnziOL3E0WnIiYPwwSUdhNcUG5eI
       - key: ALLE_AI_MODEL
         value: gemini-3-5-flash
